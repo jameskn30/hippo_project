@@ -74,6 +74,32 @@ fn existing_note_path(root: &Path, relative: &str) -> Result<PathBuf, String> {
     Ok(canonical)
 }
 
+fn existing_folder_path(root: &Path, relative: &str) -> Result<PathBuf, String> {
+    let relative = relative_path(relative)?;
+    let path = root.join(relative);
+    let canonical = path.canonicalize().map_err(|error| error.to_string())?;
+    if !canonical.starts_with(root) || !canonical.is_dir() || canonical == root {
+        return Err("The folder must be inside the active vault".to_string());
+    }
+    Ok(canonical)
+}
+
+fn existing_entry_path(root: &Path, relative: &str) -> Result<PathBuf, String> {
+    let relative = relative_path(relative)?;
+    let path = root.join(relative);
+    let metadata = fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
+    if metadata.file_type().is_symlink() {
+        return Err("Symbolic links cannot be moved".to_string());
+    }
+    let canonical = path.canonicalize().map_err(|error| error.to_string())?;
+    if !canonical.starts_with(root)
+        || (!canonical.is_dir() && canonical.extension().and_then(|ext| ext.to_str()) != Some("md"))
+    {
+        return Err("Only vault folders and Markdown notes can be moved".to_string());
+    }
+    Ok(canonical)
+}
+
 fn new_note_path(root: &Path, relative: &str) -> Result<PathBuf, String> {
     let relative = relative_path(relative)?;
     if relative.extension().and_then(|ext| ext.to_str()) != Some("md") {
@@ -256,6 +282,42 @@ fn rename_note(path: String, new_title: String, state: State<'_, AppState>) -> R
 }
 
 #[tauri::command]
+fn rename_folder(path: String, new_title: String, state: State<'_, AppState>) -> Result<String, String> {
+    let root = current_vault(&state)?;
+    let source = existing_folder_path(&root, &path)?;
+    let destination = source.with_file_name(safe_name(&new_title)?);
+    if destination.exists() {
+        return Err("A folder with that name already exists".to_string());
+    }
+    fs::rename(&source, &destination).map_err(|error| error.to_string())?;
+    Ok(destination
+        .strip_prefix(&root)
+        .map_err(|error| error.to_string())?
+        .to_string_lossy()
+        .replace('\\', "/"))
+}
+
+#[tauri::command]
+fn move_entry(path: String, target_folder: String, state: State<'_, AppState>) -> Result<String, String> {
+    let root = current_vault(&state)?;
+    let source = existing_entry_path(&root, &path)?;
+    let target = existing_folder_path(&root, &target_folder)?;
+    if source.is_dir() && target.starts_with(&source) {
+        return Err("A folder cannot be moved into itself".to_string());
+    }
+    let destination = target.join(source.file_name().ok_or("Invalid vault entry")?);
+    if destination.exists() {
+        return Err("That folder already contains an item with this name".to_string());
+    }
+    fs::rename(&source, &destination).map_err(|error| error.to_string())?;
+    Ok(destination
+        .strip_prefix(&root)
+        .map_err(|error| error.to_string())?
+        .to_string_lossy()
+        .replace('\\', "/"))
+}
+
+#[tauri::command]
 fn delete_note(path: String, state: State<'_, AppState>) -> Result<(), String> {
     let root = current_vault(&state)?;
     let note_path = existing_note_path(&root, &path)?;
@@ -314,6 +376,8 @@ pub fn run() {
             create_folder,
             save_note,
             rename_note,
+            rename_folder,
+            move_entry,
             delete_note,
             search_notes
         ])

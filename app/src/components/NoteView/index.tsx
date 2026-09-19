@@ -1,8 +1,9 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AtomicCodeMirrorEditor } from "@atomic-editor/editor";
 import type { AtomicCodeMirrorEditorHandle } from "@atomic-editor/editor";
 import { BookOpen, FileText, Pencil, Trash2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/IconButton";
 import { displayName } from "../shared/note-utils";
 import type { NoteState, SaveState } from "../shared/types";
@@ -15,7 +16,7 @@ type NoteViewProps = {
   saveState: SaveState;
   onReadingChange: (reading: boolean) => void;
   onContentChange: (content: string) => void;
-  onRename: () => void;
+  onRename: (title: string) => Promise<void>;
   onDelete: () => void;
 };
 
@@ -30,6 +31,9 @@ export function NoteView({
   onDelete,
 }: NoteViewProps) {
   const editorHandleRef = useRef<AtomicCodeMirrorEditorHandle | null>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const [isRenamingTitle, setIsRenamingTitle] = useState(false);
+  const [title, setTitle] = useState(() => displayName(note.path));
   const saveStatus = saveState === "saved" ? "All changes saved" : saveState === "saving" ? "Saving changes" : "Check save status";
 
   useEffect(() => {
@@ -37,6 +41,30 @@ export function NoteView({
     const frame = window.requestAnimationFrame(() => editorHandleRef.current?.focus());
     return () => window.cancelAnimationFrame(frame);
   }, [note.path, reading]);
+
+  useEffect(() => {
+    setTitle(displayName(note.path));
+    setIsRenamingTitle(false);
+  }, [note.path]);
+
+  const startRenamingTitle = () => {
+    setTitle(displayName(note.path));
+    setIsRenamingTitle(true);
+    window.requestAnimationFrame(() => {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    });
+  };
+
+  const saveTitle = async () => {
+    const nextTitle = title.trim();
+    setIsRenamingTitle(false);
+    if (!nextTitle || nextTitle === displayName(note.path)) {
+      setTitle(displayName(note.path));
+      return;
+    }
+    await onRename(nextTitle);
+  };
 
   return (
     <>
@@ -49,7 +77,7 @@ export function NoteView({
               <TabsTrigger value="read"><BookOpen size={14} /> Read</TabsTrigger>
             </TabsList>
           </Tabs>
-          <IconButton label="Rename note" onClick={onRename}><Pencil size={15} /></IconButton>
+          <IconButton label="Rename note" onClick={startRenamingTitle}><Pencil size={15} /></IconButton>
           <IconButton className="danger-hover" label="Delete note" onClick={onDelete}><Trash2 size={15} /></IconButton>
         </div>
       </div>
@@ -57,9 +85,30 @@ export function NoteView({
         <article className={`note-document ${reading ? "note-reading" : "note-editing"}`} style={{ "--note-font-size": `${fontSize}px` } as CSSProperties}>
           <div className="note-heading-row">
             <FileText className="note-heading-icon" size={18} />
-            <div>
+            <div className="note-title-container">
               <div className="note-kicker">MARKDOWN NOTE</div>
-              <h1>{displayName(note.path)}</h1>
+              {isRenamingTitle ? (
+                <Input
+                  ref={titleInputRef}
+                  className="note-title-input"
+                  aria-label="Note title"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  onBlur={() => void saveTitle()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
+                    if (event.key === "Escape") {
+                      setTitle(displayName(note.path));
+                      event.currentTarget.blur();
+                    }
+                  }}
+                />
+              ) : (
+                <div className="note-title-row">
+                  <h1><button className="note-title-button" type="button" onClick={startRenamingTitle}>{displayName(note.path)}</button></h1>
+                  <IconButton className="note-title-edit" label="Rename note" onClick={startRenamingTitle}><Pencil size={13} /></IconButton>
+                </div>
+              )}
             </div>
           </div>
           <div
@@ -75,7 +124,6 @@ export function NoteView({
               onMarkdownChange={onContentChange}
             />
           </div>
-          {!reading && <p className="editor-hint">Click anywhere in the note to edit. Click away to preview Markdown.</p>}
         </article>
       </section>
       <footer className="statusbar">

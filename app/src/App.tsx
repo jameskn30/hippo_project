@@ -19,6 +19,7 @@ function App() {
   const [searchResults, setSearchResults] = useState<VaultEntry[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(276);
   const [message, setMessage] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [fontSize, setFontSize] = useState(17);
@@ -143,25 +144,56 @@ function App() {
   }, [loadNote, note, persistNote, showError]);
 
   const createFolder = useCallback(async () => {
-    const name = window.prompt("Name your folder");
-    if (!name?.trim()) return;
     try {
-      await invoke("create_folder", { name: name.trim() });
-      await refreshEntries();
+      for (let index = 1; index <= 100; index += 1) {
+        const name = index === 1 ? "New folder" : `New folder ${index}`;
+        try {
+          await invoke("create_folder", { name });
+          await refreshEntries();
+          return;
+        } catch (error) {
+          if (!String(error).includes("File exists")) throw error;
+        }
+      }
+      throw new Error("Could not find an available name for the new folder");
     } catch (error) {
       showError(error);
     }
   }, [refreshEntries, showError]);
 
-  const renameCurrentNote = useCallback(async () => {
-    if (!note) return;
-    const title = window.prompt("Rename note", displayName(note.path));
-    if (!title?.trim() || title.trim() === displayName(note.path)) return;
+  const renameTreeEntry = useCallback(async (entry: VaultEntry, newTitle: string) => {
     try {
-      if (note.content !== note.savedContent) await persistNote(note);
-      const path = await invoke<string>("rename_note", { path: note.path, newTitle: title.trim() });
+      const activeNoteIsRenamed = note && (entry.isDirectory
+        ? note.path.startsWith(`${entry.path}/`)
+        : note.path === entry.path);
+      if (activeNoteIsRenamed && note.content !== note.savedContent) await persistNote(note);
+      const path = await invoke<string>(entry.isDirectory ? "rename_folder" : "rename_note", { path: entry.path, newTitle });
       await refreshEntries();
-      await loadNote(path);
+      if (note?.path === entry.path) await loadNote(path);
+      if (entry.isDirectory && note?.path.startsWith(`${entry.path}/`)) {
+        setNote((current) => current?.path.startsWith(`${entry.path}/`)
+          ? { ...current, path: `${path}${current.path.slice(entry.path.length)}` }
+          : current);
+      }
+    } catch (error) {
+      showError(error);
+    }
+  }, [loadNote, note, persistNote, refreshEntries, showError]);
+
+  const moveTreeEntry = useCallback(async (entry: VaultEntry, targetFolder: VaultEntry) => {
+    try {
+      const activeNoteIsMoved = note && (entry.isDirectory
+        ? note.path.startsWith(`${entry.path}/`)
+        : note.path === entry.path);
+      if (activeNoteIsMoved && note.content !== note.savedContent) await persistNote(note);
+      const path = await invoke<string>("move_entry", { path: entry.path, targetFolder: targetFolder.path });
+      await refreshEntries();
+      if (note?.path === entry.path) await loadNote(path);
+      if (entry.isDirectory && note?.path.startsWith(`${entry.path}/`)) {
+        setNote((current) => current?.path.startsWith(`${entry.path}/`)
+          ? { ...current, path: `${path}${current.path.slice(entry.path.length)}` }
+          : current);
+      }
     } catch (error) {
       showError(error);
     }
@@ -184,16 +216,16 @@ function App() {
     <div className="app-frame">
       {sidebarOpen && <Sidebar
         vaultPath={vaultPath} search={search} searchResults={searchResults} isSearching={isSearching}
-        tree={tree} selectedPath={note?.path ?? null} onChooseVault={() => void chooseVault()}
+        tree={tree} selectedPath={note?.path ?? null} width={sidebarWidth} onResize={setSidebarWidth} onChooseVault={() => void chooseVault()}
         onCreateNote={() => void createNote()} onCreateFolder={() => void createFolder()}
-        onSearchChange={setSearch} onOpenNote={(entry) => void openNote(entry)} onCollapse={() => setSidebarOpen(false)}
+        onSearchChange={setSearch} onOpenNote={(entry) => void openNote(entry)} onRenameEntry={renameTreeEntry} onMoveEntry={moveTreeEntry} onCollapse={() => setSidebarOpen(false)}
       />}
       <main className="main-panel">
         <Topbar vaultPath={vaultPath} note={note} saveState={saveState} sidebarOpen={sidebarOpen}
           onShowSidebar={() => setSidebarOpen(true)} onChooseVault={() => void chooseVault()} onCreateNote={() => void createNote()} />
         {note ? <NoteView note={note} reading={reading} fontSize={fontSize} saveState={saveState}
           onReadingChange={setReading} onContentChange={(content) => setNote((current) => current ? { ...current, content } : current)}
-          onRename={() => void renameCurrentNote()} onDelete={() => void deleteCurrentNote()} />
+          onRename={(newTitle) => note ? renameTreeEntry({ name: note.path, path: note.path, isDirectory: false }, newTitle) : Promise.resolve()} onDelete={() => void deleteCurrentNote()} />
           : <WelcomeState vaultPath={vaultPath} onChooseVault={() => void chooseVault()} onCreateNote={() => void createNote()} onCreateFolder={() => void createFolder()} />}
       </main>
       {message && <Toast message={message} onDismiss={() => setMessage(null)} />}
