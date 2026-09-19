@@ -1,6 +1,16 @@
 @import "../../styles/global/variables.css";
 
 .tree-row { display: flex; width: 100%; height: 31px; align-items: center; justify-content: flex-start !important; gap: 7px; padding: 0 8px; overflow: hidden; border: 0; border-radius: 6px; color: #000; background: transparent; cursor: grab; text-align: left; font-size: 12px; }
+.tree-item { position: relative; }
+.tree-root-dropzone { min-height: 100%; }
+.tree-root-dropzone-active { background: #edf2e9; }
+.tree-row-host, .tree-item > .tree-row-renaming, .tree-item > .tree-item { position: relative; z-index: 1; }
+.tree-folder-dropzone { position: absolute; z-index: 0; inset: 0; }
+.tree-reorder-zone { position: absolute; z-index: 3; right: 0; left: 0; height: 12px; pointer-events: none; }
+.tree-reorder-zone-above { top: 0; border-top: 2px solid transparent; }
+.tree-reorder-zone-below { bottom: 0; border-bottom: 2px solid transparent; }
+.tree-reorder-zone-active.tree-reorder-zone-above { border-top-color: #5f805e; }
+.tree-reorder-zone-active.tree-reorder-zone-below { border-bottom-color: #5f805e; }
 .tree-row:hover { background: #eae9e3; color: #000; }
 .tree-row-selected { color: #000; background: #e5eadf; font-weight: 600; }
 .tree-row-selected:hover { background: #dfe7d8; }

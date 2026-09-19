@@ -298,10 +298,13 @@ fn rename_folder(path: String, new_title: String, state: State<'_, AppState>) ->
 }
 
 #[tauri::command]
-fn move_entry(path: String, target_folder: String, state: State<'_, AppState>) -> Result<String, String> {
+fn move_entry(path: String, target_folder: Option<String>, state: State<'_, AppState>) -> Result<String, String> {
     let root = current_vault(&state)?;
     let source = existing_entry_path(&root, &path)?;
-    let target = existing_folder_path(&root, &target_folder)?;
+    let target = match target_folder {
+        Some(path) => existing_folder_path(&root, &path)?,
+        None => root.clone(),
+    };
     if source.is_dir() && target.starts_with(&source) {
         return Err("A folder cannot be moved into itself".to_string());
     }

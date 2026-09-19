@@ -8,7 +8,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NoteTree } from "../NoteTree";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/IconButton";
@@ -32,7 +32,7 @@ type SidebarProps = {
   onSearchChange: (value: string) => void;
   onOpenNote: (entry: VaultEntry) => void;
   onRenameEntry: (entry: VaultEntry, title: string) => Promise<void>;
-  onMoveEntry: (entry: VaultEntry, targetFolder: VaultEntry) => Promise<void>;
+  onMoveEntry: (entry: VaultEntry, targetFolder: VaultEntry | null) => Promise<void>;
   onCollapse: () => void;
 };
 
@@ -63,12 +63,54 @@ export function Sidebar({
       return {};
     }
   });
+  const [entryOrder, setEntryOrder] = useState<Record<string, string[]>>(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem("hippo.sidebar.entry-order") ?? "{}");
+    } catch {
+      return {};
+    }
+  });
 
   const folderStateKey = (path: string) => `${vaultPath ?? "no-vault"}:${path}`;
 
   useEffect(() => {
     window.localStorage.setItem("hippo.sidebar.folder-expansion", JSON.stringify(folderExpansion));
   }, [folderExpansion]);
+
+  useEffect(() => {
+    window.localStorage.setItem("hippo.sidebar.entry-order", JSON.stringify(entryOrder));
+  }, [entryOrder]);
+
+  const orderedTree = useMemo(() => {
+    const sortChildren = (nodes: TreeNode[], parentPath: string): TreeNode[] => {
+      const order = entryOrder[folderStateKey(parentPath)] ?? [];
+      const ranks = new Map(order.map((path, index) => [path, index]));
+      return nodes
+        .map((node) => ({ ...node, children: sortChildren(node.children, node.path) }))
+        .sort((left, right) => (ranks.get(left.path) ?? Number.MAX_SAFE_INTEGER) - (ranks.get(right.path) ?? Number.MAX_SAFE_INTEGER));
+    };
+    return sortChildren(tree, "");
+  }, [entryOrder, tree, vaultPath]);
+
+  const reorderEntry = (entry: VaultEntry, target: VaultEntry, position: "above" | "below") => {
+    const parentPath = target.path.includes("/") ? target.path.slice(0, target.path.lastIndexOf("/")) : "";
+    const findChildren = (nodes: TreeNode[], path: string): TreeNode[] => {
+      if (!path) return nodes;
+      for (const node of nodes) {
+        if (node.path === path) return node.children;
+        const result = findChildren(node.children, path);
+        if (result.length) return result;
+      }
+      return [];
+    };
+    const siblings = findChildren(orderedTree, parentPath).map((node) => node.path);
+    const withoutEntry = siblings.filter((path) => path !== entry.path);
+    const targetIndex = withoutEntry.indexOf(target.path);
+    if (targetIndex < 0) return;
+    const nextOrder = [...withoutEntry];
+    nextOrder.splice(position === "above" ? targetIndex : targetIndex + 1, 0, entry.path);
+    setEntryOrder((current) => ({ ...current, [folderStateKey(parentPath)]: nextOrder }));
+  };
 
   const constrainWidth = (nextWidth: number) => Math.min(Math.max(nextWidth, 210), Math.max(210, window.innerWidth - 500));
 
@@ -131,13 +173,14 @@ export function Sidebar({
             )) : <div className="tree-empty">No matching notes.</div>}
           </>
         ) : tree.length ? <NoteTree
-          nodes={tree}
+          nodes={orderedTree}
           selectedPath={selectedPath}
           isFolderExpanded={(path) => folderExpansion[folderStateKey(path)] ?? false}
           onFolderExpandedChange={(path, expanded) => setFolderExpansion((current) => ({ ...current, [folderStateKey(path)]: expanded }))}
           onOpen={onOpenNote}
           onRename={onRenameEntry}
           onMove={onMoveEntry}
+          onReorder={reorderEntry}
         /> : <div className="tree-empty">No notes yet. Create one to get started.</div>}
       </div>
 

@@ -180,13 +180,14 @@ function App() {
     }
   }, [loadNote, note, persistNote, refreshEntries, showError]);
 
-  const moveTreeEntry = useCallback(async (entry: VaultEntry, targetFolder: VaultEntry) => {
+  const moveTreeEntry = useCallback(async (entry: VaultEntry, targetFolder: VaultEntry | null) => {
+    if (!targetFolder && !entry.path.includes("/")) return;
     try {
       const activeNoteIsMoved = note && (entry.isDirectory
         ? note.path.startsWith(`${entry.path}/`)
         : note.path === entry.path);
       if (activeNoteIsMoved && note.content !== note.savedContent) await persistNote(note);
-      const path = await invoke<string>("move_entry", { path: entry.path, targetFolder: targetFolder.path });
+      const path = await invoke<string>("move_entry", { path: entry.path, targetFolder: targetFolder?.path ?? null });
       await refreshEntries();
       if (note?.path === entry.path) await loadNote(path);
       if (entry.isDirectory && note?.path.startsWith(`${entry.path}/`)) {

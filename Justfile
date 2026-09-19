@@ -23,6 +23,10 @@ app-setup:
 app-dev:
     cd app && bun run tauri dev
 
+# Show the debug app while its development server is already running.
+app-show:
+    open app/src-tauri/target/debug/hippo-app
+
 # Build a distributable desktop app for this platform.
 app-build:
     cd app && bun run tauri build
