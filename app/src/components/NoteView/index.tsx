@@ -1,5 +1,6 @@
-import type { CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { AtomicCodeMirrorEditor } from "@atomic-editor/editor";
+import type { AtomicCodeMirrorEditorHandle } from "@atomic-editor/editor";
 import { BookOpen, FileText, Pencil, Trash2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IconButton } from "@/components/IconButton";
@@ -28,7 +29,14 @@ export function NoteView({
   onRename,
   onDelete,
 }: NoteViewProps) {
+  const editorHandleRef = useRef<AtomicCodeMirrorEditorHandle | null>(null);
   const saveStatus = saveState === "saved" ? "All changes saved" : saveState === "saving" ? "Saving changes" : "Check save status";
+
+  useEffect(() => {
+    if (reading) return;
+    const frame = window.requestAnimationFrame(() => editorHandleRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [note.path, reading]);
 
   return (
     <>
@@ -54,14 +62,20 @@ export function NoteView({
               <h1>{displayName(note.path)}</h1>
             </div>
           </div>
-          <div className="editor-surface" aria-label={`Edit ${displayName(note.path)} as Markdown`}>
+          <div
+            className="editor-surface"
+            aria-label={`Edit ${displayName(note.path)} as Markdown`}
+            onClick={() => !reading && editorHandleRef.current?.focus()}
+          >
             <AtomicCodeMirrorEditor
               documentId={note.path}
               markdownSource={note.content}
               readOnly={reading}
+              editorHandleRef={editorHandleRef}
               onMarkdownChange={onContentChange}
             />
           </div>
+          {!reading && <p className="editor-hint">Click anywhere in the note to edit. Click away to preview Markdown.</p>}
         </article>
       </section>
       <footer className="statusbar">
