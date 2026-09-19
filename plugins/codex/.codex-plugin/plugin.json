@@ -1,0 +1,5 @@
+{
+  "name": "hippo",
+  "version": "0.1.0",
+  "description": "Connect Codex to Hippo's local knowledge store and workflows."
+}
