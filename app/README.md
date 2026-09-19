@@ -1,5 +1,5 @@
-# Desktop app
+# Hippo desktop app
 
-The cross-platform desktop client will use Tauri, React, TypeScript, Tailwind CSS, and CodeMirror 6. Tauri owns the desktop shell; the UI calls the local service in `core/` for knowledge operations.
+The desktop client is built with Tauri 2, React, TypeScript, Tailwind CSS, and CodeMirror 6. It edits Markdown files directly in a local vault; the Markdown files remain the source of truth.
 
-The application source and Tauri project will be added with the first app implementation.
+From the repository root, use `just app-setup` to install dependencies, `just app-dev` to run the desktop app, and `just app-build` to create a platform bundle. See the root [README](../README.md) for prerequisites.
