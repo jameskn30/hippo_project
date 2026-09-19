@@ -1,0 +1,26 @@
+@import "../../styles/global/variables.css";
+@import "@atomic-editor/editor/styles.css";
+
+.note-toolbar { display: flex; height: 51px; align-items: center; justify-content: space-between; padding: 0 27px; border-bottom: 1px solid #efeee9; }
+.note-path { min-width: 0; overflow: hidden; color: #a0a198; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.note-actions { display: flex; align-items: center; gap: 5px; }
+.view-switch { display: flex; gap: 2px; padding: 3px; border: 1px solid #ecebe6; border-radius: 7px; background: #f5f4f0; }
+.view-switch button { display: flex; height: 26px; align-items: center; gap: 5px; padding: 0 8px; border: 0; border-radius: 5px; color: #92958e; background: transparent; font-size: 11px; }
+.view-switch button.active, .view-switch button[data-state="active"] { color: #000; background: #fff; box-shadow: 0 1px 2px #2221; }
+.danger-hover:hover { color: #a6544b; background: #f7eae7; }
+.note-scroll-area { overflow: auto; flex: 1; }
+.note-document { width: min(100%, 820px); min-height: 100%; margin: 0 auto; padding: 56px 82px 80px; }
+.note-heading-row { display: flex; align-items: center; gap: 13px; margin-bottom: 34px; }
+.note-heading-icon { color: #8da087; }
+.note-kicker { margin-bottom: 4px; color: #9b9e95; font-size: 9px; font-weight: 700; letter-spacing: .11em; }
+.note-heading-row h1 { margin: 0; color: #000; font-family: Georgia, "Times New Roman", serif; font-size: 31px; font-weight: 500; letter-spacing: -.6px; }
+.editor-surface { min-height: 390px; color: #000; font-size: var(--note-font-size); line-height: 1.8; --atomic-editor-font: Inter, ui-sans-serif, system-ui, sans-serif; --atomic-editor-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace; --atomic-editor-body-size: var(--note-font-size); --atomic-editor-body-leading: 1.8; --atomic-editor-measure: 70ch; --atomic-editor-fg: #000; --atomic-editor-fg-muted: #272727; --atomic-editor-fg-faint: #555; --atomic-editor-bg: transparent; --atomic-editor-bg-panel: #f8f7f4; --atomic-editor-bg-surface: #f4f3ef; --atomic-editor-border: #deddd7; --atomic-editor-accent: #55765b; --atomic-editor-accent-bright: #55765b; --atomic-editor-accent-soft: #9cad95; --atomic-editor-link: #000; --atomic-editor-link-hover: #000; --atomic-editor-code-bg: #f1f0eb; --atomic-editor-selection-bg: #dfe7d8; --atomic-editor-search-bg: #e5eadf; --atomic-editor-search-bg-active: #cddac5; }
+.editor-surface .cm-editor { min-height: 390px; background: transparent; }
+.editor-surface .cm-scroller { font-size: var(--note-font-size); line-height: 1.8; }
+.editor-surface .cm-focused { outline: none; }
+.editor-surface .cm-content { padding: 8px 0; color: #000; }
+.editor-surface .cm-line { color: #000; }
+.statusbar { display: flex; height: 32px; flex: 0 0 32px; align-items: center; gap: 16px; padding: 0 20px; border-top: 1px solid var(--line); color: #999b94; background: #f8f7f4; font-size: 10px; }
+.status-spacer { flex: 1; }
+.shortcut-hint { padding-left: 11px; border-left: 1px solid #e7e6e0; }
+@media (max-width: 1000px) { .note-document { padding-right: 50px; padding-left: 50px; } }

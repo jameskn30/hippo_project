@@ -1,0 +1,11 @@
+@import "../../styles/global/variables.css";
+@import "../../styles/global/controls.css";
+
+.welcome-state { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; padding: 34px; text-align: center; }
+.welcome-emblem { display: grid; width: 57px; height: 57px; place-items: center; margin-bottom: 25px; border: 1px solid #e7e8df; border-radius: 18px 18px 18px 6px; color: #648267; background: #f0f2eb; }
+.welcome-eyebrow { margin-bottom: 11px; color: #899783; font-size: 9px; font-weight: 700; letter-spacing: .16em; }
+.welcome-state h1 { margin: 0; color: #000; font-family: Georgia, "Times New Roman", serif; font-size: 32px; font-weight: 500; letter-spacing: -.5px; }
+.welcome-state p { max-width: 340px; margin: 12px 0 20px; color: #898d84; font-size: 12px; line-height: 1.7; }
+.welcome-buttons { display: flex; gap: 8px; }
+.welcome-footnote { margin-top: 31px; color: #a0a299; font-size: 10px; }
+.welcome-footnote span { padding: 0 5px; color: #b6b8b0; }

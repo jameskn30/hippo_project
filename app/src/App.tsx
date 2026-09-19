@@ -8,7 +8,7 @@ import type { NoteContent, NoteState, SaveState, VaultEntry } from "@/components
 import { Toast } from "@/components/Toast";
 import { Topbar } from "@/components/Topbar";
 import { WelcomeState } from "@/components/WelcomeState";
-import "./App.css";
+import "@/styles/global/index.css";
 
 function App() {
   const [vaultPath, setVaultPath] = useState<string | null>(null);
@@ -61,12 +61,19 @@ function App() {
 
   const createNote = useCallback(async () => {
     if (!vaultPath) return chooseVault();
-    const title = window.prompt("Name your note");
-    if (!title?.trim()) return;
     try {
-      const path = await invoke<string>("create_note", { title: title.trim() });
-      await refreshEntries();
-      await loadNote(path);
+      for (let index = 1; index <= 100; index += 1) {
+        const title = index === 1 ? "Untitled" : `Untitled ${index}`;
+        try {
+          const path = await invoke<string>("create_note", { title });
+          await refreshEntries();
+          await loadNote(path);
+          return;
+        } catch (error) {
+          if (!String(error).includes("already exists")) throw error;
+        }
+      }
+      throw new Error("Could not find an available name for the new note");
     } catch (error) {
       showError(error);
     }

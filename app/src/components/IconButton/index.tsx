@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import "./styles.css";
 
 type IconButtonProps = Omit<ComponentProps<typeof Button>, "children" | "size"> & {
   label: string;

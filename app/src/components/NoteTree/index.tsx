@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen } from "lucide-
 import { displayName } from "../shared/note-utils";
 import type { TreeNode, VaultEntry } from "../shared/types";
 import { Button } from "@/components/ui/button";
+import "./styles.css";
 
 type NoteTreeProps = {
   nodes: TreeNode[];

@@ -1,0 +1,4 @@
+@import "../../styles/global/variables.css";
+
+.toast { position: fixed; right: 22px; bottom: 22px; display: flex; max-width: min(440px, calc(100vw - 40px)); align-items: center; gap: 14px; padding: 11px 13px; border: 1px solid #e7d8cf; border-radius: 9px; color: #694d40; background: #fffaf6; box-shadow: 0 8px 26px #2c2b2514; font-size: 11px; }
+.toast .icon-button { width: 24px; height: 24px; color: inherit; }

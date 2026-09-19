@@ -1,0 +1,19 @@
+@import "./variables.css";
+
+.button-primary, .button-secondary {
+  display: inline-flex;
+  height: 33px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: background .15s, border-color .15s;
+}
+.button-primary { color: white; background: #5d795f; box-shadow: 0 1px 1px #253c2820; }
+.button-primary:hover { background: #4f6b52; }
+.button-secondary { border-color: #e5e4de; color: #000; background: #fbfaf7; }
+.button-secondary:hover { background: #f1f0eb; }

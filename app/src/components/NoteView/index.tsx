@@ -1,13 +1,11 @@
 import type { CSSProperties } from "react";
-import CodeMirror from "@uiw/react-codemirror";
-import { markdown } from "@codemirror/lang-markdown";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { AtomicCodeMirrorEditor } from "@atomic-editor/editor";
 import { BookOpen, FileText, Pencil, Trash2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IconButton } from "@/components/IconButton";
 import { displayName } from "../shared/note-utils";
 import type { NoteState, SaveState } from "../shared/types";
+import "./styles.css";
 
 type NoteViewProps = {
   note: NoteState;
@@ -56,22 +54,14 @@ export function NoteView({
               <h1>{displayName(note.path)}</h1>
             </div>
           </div>
-          {reading ? (
-            <div className="markdown-body">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content || "_This note is empty. Switch to Edit to start writing._"}</ReactMarkdown>
-            </div>
-          ) : (
-            <div className="editor-surface">
-              <CodeMirror
-                value={note.content}
-                height="100%"
-                extensions={[markdown()]}
-                onChange={onContentChange}
-                basicSetup={{ lineNumbers: false, foldGutter: true, highlightActiveLine: false, highlightActiveLineGutter: false }}
-                aria-label={`Edit ${displayName(note.path)} as Markdown`}
-              />
-            </div>
-          )}
+          <div className="editor-surface" aria-label={`Edit ${displayName(note.path)} as Markdown`}>
+            <AtomicCodeMirrorEditor
+              documentId={note.path}
+              markdownSource={note.content}
+              readOnly={reading}
+              onMarkdownChange={onContentChange}
+            />
+          </div>
         </article>
       </section>
       <footer className="statusbar">

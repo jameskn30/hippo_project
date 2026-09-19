@@ -14,6 +14,7 @@ import { IconButton } from "@/components/IconButton";
 import { Input } from "@/components/ui/input";
 import { displayName, formatVaultPath } from "../shared/note-utils";
 import type { TreeNode, VaultEntry } from "../shared/types";
+import "./styles.css";
 
 type SidebarProps = {
   vaultPath: string | null;

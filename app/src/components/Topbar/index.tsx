@@ -1,6 +1,7 @@
 import { Check, FilePlus2, FolderOpen, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/IconButton";
+import "./styles.css";
 import { displayName } from "../shared/note-utils";
 import type { NoteState, SaveState } from "../shared/types";
 
@@ -37,7 +38,7 @@ export function Topbar({
           {saveState === "saved" && <Check size={13} />} {saveLabel}
         </span>}
         <Button className="button-secondary" variant="outline" size="sm" onClick={onChooseVault}><FolderOpen size={15} /> Open vault</Button>
-        <Button className="button-primary" size="sm" onClick={onCreateNote} disabled={!vaultPath}><FilePlus2 size={15} /> New note</Button>
+        <Button className="button-primary" size="sm" onClick={onCreateNote} disabled={!vaultPath}><FilePlus2 size={15} /> New document</Button>
       </div>
     </header>
   );

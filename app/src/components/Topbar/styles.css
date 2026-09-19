@@ -1,0 +1,9 @@
+@import "../../styles/global/variables.css";
+@import "../../styles/global/controls.css";
+
+.topbar { display: flex; height: 57px; flex: 0 0 57px; align-items: center; justify-content: space-between; padding: 0 27px; border-bottom: 1px solid var(--line); }
+.breadcrumbs, .topbar-actions { display: flex; align-items: center; gap: 9px; }
+.crumb-muted { color: #92958e; font-size: 12px; }
+.crumb-divider { color: #c2c3bd; font-size: 13px; }
+.crumb-current { color: #000; font-size: 12px; font-weight: 600; }
+@media (max-width: 1000px) { .topbar { padding-right: 18px; padding-left: 18px; } }

@@ -1,5 +1,6 @@
 import { BookOpen, FilePlus2, FolderOpen, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import "./styles.css";
 
 type WelcomeStateProps = {
   vaultPath: string | null;
