@@ -1,11 +1,8 @@
 import { Box } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
-import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { type PropsWithChildren, useCallback, useMemo } from "react";
+import { type PropsWithChildren, useCallback } from "react";
 import { Sidebar } from "../Sidebar";
 import type { VaultEntry } from "@/lib/vault/types";
-import { buildVaultTree, findVaultTreeItem } from "./vault-tree";
 import "./styles.css";
 
 type DashboardProps = PropsWithChildren<{
@@ -35,30 +32,14 @@ export function Dashboard({
     }
   }, [onError, vaultPath]);
 
-  const vaultItems = useMemo(() => buildVaultTree(vaultEntries), [vaultEntries]);
-  const vaultTree = vaultItems.length ? (
-    <RichTreeView
-      className="vault-tree"
-      defaultExpandedItems={vaultItems.filter((item) => item.isDirectory).map((item) => item.id)}
-      items={vaultItems}
-      itemChildrenIndentation={16}
-      onItemClick={(_, itemId) => {
-        const item = findVaultTreeItem(vaultItems, itemId);
-        if (item && !item.isDirectory) onOpenNote(item.id);
-      }}
-      selectedItems={selectedPath ?? null}
-      slots={{ collapseIcon: ChevronDown, expandIcon: ChevronRight }}
-    />
-  ) : (
-    <p className="vault-tree-empty">No Markdown notes in this vault.</p>
-  );
-
   return (
     <Box className={`app-frame ${sidebarOpen ? "app-frame-sidebar-open" : ""}`}>
       <Sidebar
         open={sidebarOpen}
         vaultPath={vaultPath}
-        tree={vaultTree}
+        vaultEntries={vaultEntries}
+        selectedPath={selectedPath}
+        onOpenNote={onOpenNote}
         onRevealVault={() => void revealVault()}
       />
       <Box className="main-panel" component="main">

@@ -1,16 +1,26 @@
 import { Avatar, Box, Button, Divider, Drawer, Typography } from "@mui/material";
 import { FolderOpen } from "lucide-react";
-import type { ReactNode } from "react";
+import type { VaultEntry } from "@/lib/vault/types";
+import { VaultTree } from "./VaultTree";
 import "./styles.css";
 
 type SidebarProps = {
   open: boolean;
   vaultPath: string | null;
-  tree: ReactNode;
+  vaultEntries: VaultEntry[];
+  selectedPath: string | null;
   onRevealVault: () => void;
+  onOpenNote: (path: string) => void;
 };
 
-export function Sidebar({ open, vaultPath, tree, onRevealVault }: SidebarProps) {
+export function Sidebar({
+  open,
+  vaultPath,
+  vaultEntries,
+  selectedPath,
+  onRevealVault,
+  onOpenNote,
+}: SidebarProps) {
   return (
     <Drawer
       anchor="left"
@@ -40,7 +50,7 @@ export function Sidebar({ open, vaultPath, tree, onRevealVault }: SidebarProps) 
           <Typography className="sidebar-section-title" component="h2" id="sidebar-notes-heading">
             Notes
           </Typography>
-          {tree}
+          <VaultTree entries={vaultEntries} selectedPath={selectedPath} onOpenNote={onOpenNote} />
         </section>
 
         <Box className="sidebar-footer">

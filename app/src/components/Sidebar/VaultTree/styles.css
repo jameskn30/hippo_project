@@ -1,0 +1,51 @@
+@import "../../../styles/global/variables.css";
+
+.vault-tree {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  color: var(--foreground);
+}
+
+.vault-tree .MuiTreeItem-content {
+  min-height: 30px;
+  border-radius: var(--radius);
+}
+
+.vault-tree .MuiTreeItem-content:hover,
+.vault-tree .MuiTreeItem-content.Mui-selected,
+.vault-tree .MuiTreeItem-content.Mui-selected:hover {
+  background: var(--muted);
+}
+
+.vault-tree .MuiTreeItem-label {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-tree .MuiTreeItem-iconContainer {
+  display: none;
+}
+
+.vault-tree-directory-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.vault-tree-directory-label svg {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+}
+
+.vault-tree-empty {
+  margin: 0;
+  padding: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
