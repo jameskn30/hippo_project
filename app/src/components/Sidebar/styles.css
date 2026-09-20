@@ -1,21 +1,61 @@
 @import "../../styles/global/variables.css";
 
 .sidebar {
-  display: flex;
   width: 240px;
   flex: 0 0 240px;
+  transition:
+    width 180ms ease,
+    flex-basis 180ms ease;
+}
+
+.sidebar-closed {
+  width: 0;
+  flex-basis: 0;
+}
+
+.sidebar-paper {
+  width: 240px;
+  border-right: 1px solid var(--border) !important;
+  background: var(--background) !important;
+}
+
+.sidebar-content {
+  display: flex;
+  height: 100%;
   flex-direction: column;
-  gap: 20px;
-  padding: 16px 12px;
-  border-right: 1px solid var(--border);
-  background: var(--background);
+  gap: 16px;
+  padding: 14px 12px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 24px;
+  padding: 2px 4px;
+}
+
+.sidebar-logo {
+  width: 28px !important;
+  height: 28px !important;
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
 }
 
 .sidebar-brand {
-  padding: 0 4px;
+  display: block;
   color: var(--foreground);
   font-size: 14px;
   font-weight: 600;
+}
+
+.sidebar-subtitle {
+  display: block;
+  margin-top: 1px;
+  color: var(--muted-foreground);
+  font-size: 11px;
 }
 
 .sidebar-section {
@@ -30,21 +70,63 @@
   font-weight: 500;
 }
 
-.sidebar-search {
-  display: flex;
-  height: 32px;
-  align-items: center;
-  gap: 8px;
-  padding: 0 9px;
-  border: 1px solid var(--input);
+.sidebar-search .MuiOutlinedInput-root {
   border-radius: var(--radius);
-  color: var(--muted-foreground);
+  color: var(--foreground);
   font-size: 12px;
+}
+
+.sidebar-search .MuiOutlinedInput-notchedOutline {
+  border-color: var(--input);
+}
+
+.sidebar-search .MuiInputAdornment-root {
+  color: var(--muted-foreground);
 }
 
 .sidebar-empty {
   padding: 4px;
   color: var(--muted-foreground);
   font-size: 12px;
+  line-height: 1.5;
+}
+
+.sidebar-navigation {
+  display: grid;
+  gap: 2px;
+}
+
+.sidebar-navigation-item {
+  min-height: 34px !important;
+  padding: 0 9px !important;
+  border-radius: var(--radius) !important;
+  color: var(--muted-foreground);
+}
+
+.sidebar-navigation-item-selected {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.sidebar-navigation-item .MuiListItemIcon-root {
+  min-width: 30px;
+  color: inherit;
+}
+
+.sidebar-navigation-item .MuiListItemText-primary {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sidebar-footer {
+  display: grid;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.sidebar-footer-copy {
+  padding: 0 4px;
+  color: var(--muted-foreground);
+  font-size: 11px;
   line-height: 1.5;
 }

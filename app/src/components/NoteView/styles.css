@@ -3,17 +3,17 @@
 
 .note-toolbar {
   display: flex;
-  height: 51px;
+  min-height: 44px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 27px;
-  border-bottom: 1px solid #efeee9;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
 }
 .note-path {
   min-width: 0;
   overflow: hidden;
-  color: #a0a198;
-  font-size: 11px;
+  color: var(--muted-foreground);
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -26,9 +26,9 @@
   display: flex;
   gap: 2px;
   padding: 3px;
-  border: 1px solid #ecebe6;
-  border-radius: 7px;
-  background: #f5f4f0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--muted);
 }
 .view-switch button {
   display: flex;
@@ -38,7 +38,7 @@
   padding: 0 8px;
   border: 0;
   border-radius: 5px;
-  color: #92958e;
+  color: var(--muted-foreground);
   background: transparent;
   font-size: 11px;
 }
@@ -46,47 +46,48 @@
 .view-switch button[data-state="active"] {
   color: #000;
   background: #fff;
-  box-shadow: 0 1px 2px #2221;
+  box-shadow: none;
 }
 .danger-hover:hover {
-  color: #a6544b;
-  background: #f7eae7;
+  color: var(--destructive);
+  background: color-mix(in oklch, var(--destructive) 8%, white);
 }
 .note-scroll-area {
+  min-height: 0;
   overflow: auto;
   flex: 1;
 }
 .note-document {
-  width: min(100%, 820px);
+  width: min(100%, 920px);
   min-height: 100%;
   margin: 0 auto;
-  padding: 56px 82px 80px;
+  padding: 48px 64px 72px;
 }
 .note-heading-row {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 13px;
-  margin-bottom: 34px;
+  gap: 12px;
+  margin-bottom: 28px;
   text-align: left;
 }
 .note-heading-icon {
-  color: #8da087;
+  color: var(--muted-foreground);
 }
 .note-kicker {
   margin-bottom: 4px;
-  color: #9b9e95;
-  font-size: 9px;
+  color: var(--muted-foreground);
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.11em;
 }
 .note-heading-row h1 {
   margin: 0;
-  color: #000;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  font-size: 31px;
-  font-weight: 500;
-  letter-spacing: -0.6px;
+  color: var(--foreground);
+  font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
 }
 .note-title-row {
   display: flex;
@@ -103,7 +104,7 @@
   cursor: text;
 }
 .note-title-button:focus-visible {
-  outline: 2px solid #8da087;
+  outline: 2px solid var(--foreground);
   outline-offset: 4px;
   border-radius: 3px;
 }
@@ -121,16 +122,16 @@
   width: min(100%, 430px);
   height: 39px;
   padding: 0 6px;
-  border-color: #c8c9c1;
-  color: #000;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 31px;
-  font-weight: 500;
-  letter-spacing: -0.6px;
+  border-color: var(--foreground);
+  color: var(--foreground);
+  font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
 }
 .editor-surface {
   min-height: 390px;
-  color: #000;
+  color: var(--foreground);
   font-size: var(--note-font-size);
   line-height: 1.8;
   --atomic-editor-font: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -138,22 +139,22 @@
   --atomic-editor-body-size: var(--note-font-size);
   --atomic-editor-body-leading: 1.8;
   --atomic-editor-measure: 70ch;
-  --atomic-editor-fg: #000;
-  --atomic-editor-fg-muted: #272727;
-  --atomic-editor-fg-faint: #555;
+  --atomic-editor-fg: var(--foreground);
+  --atomic-editor-fg-muted: var(--muted-foreground);
+  --atomic-editor-fg-faint: var(--muted-foreground);
   --atomic-editor-bg: transparent;
-  --atomic-editor-bg-panel: #f8f7f4;
-  --atomic-editor-bg-surface: #f4f3ef;
-  --atomic-editor-border: #deddd7;
-  --atomic-editor-accent: #55765b;
-  --atomic-editor-accent-bright: #55765b;
-  --atomic-editor-accent-soft: #9cad95;
-  --atomic-editor-link: #000;
-  --atomic-editor-link-hover: #000;
-  --atomic-editor-code-bg: #f1f0eb;
-  --atomic-editor-selection-bg: #dfe7d8;
-  --atomic-editor-search-bg: #e5eadf;
-  --atomic-editor-search-bg-active: #cddac5;
+  --atomic-editor-bg-panel: var(--muted);
+  --atomic-editor-bg-surface: var(--muted);
+  --atomic-editor-border: var(--border);
+  --atomic-editor-accent: var(--foreground);
+  --atomic-editor-accent-bright: var(--foreground);
+  --atomic-editor-accent-soft: var(--muted-foreground);
+  --atomic-editor-link: var(--foreground);
+  --atomic-editor-link-hover: var(--foreground);
+  --atomic-editor-code-bg: var(--muted);
+  --atomic-editor-selection-bg: var(--border);
+  --atomic-editor-search-bg: var(--border);
+  --atomic-editor-search-bg-active: var(--muted-foreground);
 }
 .editor-surface .cm-editor {
   min-height: 390px;
@@ -168,10 +169,10 @@
 }
 .editor-surface .cm-content {
   padding: 8px 0;
-  color: #000;
+  color: var(--foreground);
 }
 .editor-surface .cm-line {
-  color: #000;
+  color: var(--foreground);
 }
 .statusbar {
   display: flex;
@@ -180,17 +181,17 @@
   align-items: center;
   gap: 16px;
   padding: 0 20px;
-  border-top: 1px solid var(--line);
-  color: #999b94;
-  background: #f8f7f4;
-  font-size: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  background: var(--background);
+  font-size: 11px;
 }
 .status-spacer {
   flex: 1;
 }
 .shortcut-hint {
   padding-left: 11px;
-  border-left: 1px solid #e7e6e0;
+  border-left: 1px solid var(--border);
 }
 @media (max-width: 1000px) {
   .note-document {

@@ -2,13 +2,15 @@
 @import "../../styles/global/controls.css";
 
 .topbar {
+  border-bottom: 1px solid var(--border);
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}
+.topbar-toolbar {
   display: flex;
-  height: 57px;
-  flex: 0 0 57px;
-  align-items: center;
+  min-height: 52px !important;
   justify-content: space-between;
-  padding: 0 27px;
-  border-bottom: 1px solid var(--line);
+  padding: 0 20px !important;
 }
 .breadcrumbs,
 .topbar-actions {
@@ -17,21 +19,29 @@
   gap: 9px;
 }
 .crumb-muted {
-  color: #92958e;
-  font-size: 12px;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
 }
 .crumb-divider {
-  color: #c2c3bd;
+  color: var(--muted-foreground);
   font-size: 13px;
 }
 .crumb-current {
-  color: #000;
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.topbar-sidebar-toggle {
+  margin-right: 2px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: var(--foreground) !important;
 }
 @media (max-width: 1000px) {
-  .topbar {
-    padding-right: 18px;
-    padding-left: 18px;
+  .topbar-toolbar {
+    padding-right: 18px !important;
+    padding-left: 18px !important;
   }
 }

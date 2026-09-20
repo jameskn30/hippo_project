@@ -1,6 +1,7 @@
 @import "./variables.css";
 
 .app-frame {
+  position: relative;
   display: flex;
   width: 100vw;
   height: 100vh;
@@ -9,9 +10,11 @@
 }
 .main-panel {
   display: flex;
+  min-height: 0;
   min-width: 0;
   flex: 1;
   flex-direction: column;
+  background: var(--background);
 }
 @media (max-width: 1000px) {
   .main-panel {
