@@ -92,9 +92,11 @@ function VaultTreeItem(props: TreeItemProps) {
       onDoubleClick={(event) => event.stopPropagation()}
       onFocus={(event) => event.currentTarget.select()}
       onKeyDown={(event) => {
+        event.stopPropagation();
         if (event.key === "Enter") event.currentTarget.blur();
         if (event.key === "Escape") rename?.cancelRename();
       }}
+      onKeyUp={(event) => event.stopPropagation()}
       value={rename?.renameState?.title ?? ""}
     />
   ) : item?.isDirectory ? (
