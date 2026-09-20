@@ -47,7 +47,7 @@
 .sidebar-brand {
   display: block;
   color: var(--foreground);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -55,7 +55,7 @@
   display: block;
   margin-top: 1px;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .sidebar-section {
@@ -70,8 +70,31 @@
 .sidebar-section-title {
   padding: 0 4px;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
+}
+
+.sidebar-tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-action-group {
+  display: flex;
+  gap: 2px;
+}
+
+.sidebar-action-group .MuiIconButton-root {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+}
+
+.sidebar-action-group .MuiIconButton-root:not(:disabled):hover {
+  color: var(--foreground);
+  background: var(--muted);
 }
 
 .sidebar-footer {
@@ -80,16 +103,11 @@
   margin-top: auto;
 }
 
-.sidebar-actions .MuiButton-root {
-  justify-content: flex-start;
-  text-transform: none;
-}
-
 .sidebar-footer-copy {
   overflow: hidden;
   padding: 0 4px;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;

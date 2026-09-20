@@ -1,4 +1,4 @@
-import { Avatar, Box, Button, ButtonGroup, Divider, Drawer, Typography } from "@mui/material";
+import { Avatar, Box, Divider, Drawer, IconButton, Tooltip, Typography } from "@mui/material";
 import { FilePlus2, FolderOpen, FolderPlus } from "lucide-react";
 import type { VaultEntry } from "@/lib/vault/types";
 import { VaultTree } from "./VaultTree";
@@ -51,31 +51,54 @@ export function Sidebar({
         <Divider />
 
         <section className="sidebar-section" aria-labelledby="sidebar-notes-heading">
-          <Typography className="sidebar-section-title" component="h2" id="sidebar-notes-heading">
-            Notes
-          </Typography>
+          <Box className="sidebar-tree-header">
+            <Typography className="sidebar-section-title" component="h2" id="sidebar-notes-heading">
+              Notes
+            </Typography>
+            <Box className="sidebar-action-group">
+              <Tooltip title="Reveal in Finder">
+                <span>
+                  <IconButton
+                    aria-label="Reveal vault in Finder"
+                    disabled={!vaultPath}
+                    onClick={onRevealVault}
+                    size="small"
+                  >
+                    <FolderOpen size={15} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title="New note">
+                <span>
+                  <IconButton
+                    aria-label="Create note"
+                    disabled={!vaultPath}
+                    onClick={onCreateNote}
+                    size="small"
+                  >
+                    <FilePlus2 size={15} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title="New folder">
+                <span>
+                  <IconButton
+                    aria-label="Create folder"
+                    disabled={!vaultPath}
+                    onClick={onCreateFolder}
+                    size="small"
+                  >
+                    <FolderPlus size={15} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
+          </Box>
           <VaultTree entries={vaultEntries} selectedPath={selectedPath} onOpenNote={onOpenNote} />
         </section>
 
         <Box className="sidebar-footer">
           <Divider />
-          <ButtonGroup
-            className="sidebar-actions"
-            disabled={!vaultPath}
-            fullWidth
-            orientation="vertical"
-            variant="outlined"
-          >
-            <Button onClick={onRevealVault} size="small" startIcon={<FolderOpen size={15} />}>
-              Reveal in Finder
-            </Button>
-            <Button onClick={onCreateNote} size="small" startIcon={<FilePlus2 size={15} />}>
-              New note
-            </Button>
-            <Button onClick={onCreateFolder} size="small" startIcon={<FolderPlus size={15} />}>
-              New folder
-            </Button>
-          </ButtonGroup>
           <Typography className="sidebar-footer-copy" variant="caption">
             {vaultPath ?? "Choose a vault to browse its files."}
           </Typography>

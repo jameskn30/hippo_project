@@ -12,7 +12,7 @@ const theme = createTheme({
   shape: { borderRadius: 6 },
   typography: {
     fontFamily: '"Geist Variable", ui-sans-serif, system-ui, sans-serif',
-    fontSize: 14,
+    fontSize: 16,
   },
   components: {
     MuiButton: { defaultProps: { disableElevation: true } },

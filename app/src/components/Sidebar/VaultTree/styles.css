@@ -23,7 +23,7 @@
 .vault-tree .MuiTreeItem-label {
   overflow: hidden;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

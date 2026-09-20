@@ -20,16 +20,16 @@
 }
 .crumb-muted {
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 .crumb-divider {
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
 }
 .crumb-current {
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
 }
 
