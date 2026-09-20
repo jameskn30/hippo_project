@@ -1,212 +1,50 @@
 @import "../../styles/global/variables.css";
 
 .sidebar {
-  position: relative;
   display: flex;
-  min-width: 210px;
-  flex: 0 0 276px;
+  width: 240px;
+  flex: 0 0 240px;
   flex-direction: column;
-  overflow: visible;
-  background: oklch(0.985 0 0);
-  border-right: 1px solid var(--line);
-  padding: 12px 8px 8px;
+  gap: 20px;
+  padding: 16px 12px;
+  border-right: 1px solid var(--border);
+  background: var(--background);
 }
-.brand-row {
-  display: flex;
-  height: 34px;
-  align-items: center;
-  gap: 9px;
-  padding: 0 7px;
-  margin-bottom: 12px;
-}
-.brand-mark {
-  display: grid;
-  width: 25px;
-  height: 25px;
-  place-items: center;
-  color: var(--primary-foreground);
-  background: var(--primary);
-  border-radius: var(--radius);
-  font-size: 15px;
-  font-weight: 600;
-}
-.brand-name {
+
+.sidebar-brand {
+  padding: 0 4px;
+  color: var(--foreground);
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0;
 }
-.sidebar-collapse {
-  margin-left: auto;
-}
-.vault-switcher {
-  display: flex;
-  width: 100%;
-  height: auto;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-color: var(--border);
-  border-radius: var(--radius);
-  background: var(--background);
-  text-align: left;
-}
-.vault-switcher:hover {
-  background: var(--muted);
-}
-.vault-avatar {
+
+.sidebar-section {
   display: grid;
-  width: 31px;
-  height: 31px;
-  flex: 0 0 31px;
-  place-items: center;
-  background: var(--muted);
+  gap: 8px;
+}
+
+.sidebar-section-title {
+  padding: 0 4px;
   color: var(--muted-foreground);
-  border-radius: calc(var(--radius) - 2px);
   font-size: 12px;
   font-weight: 500;
 }
-.vault-copy {
-  display: grid;
-  min-width: 0;
-  flex: 1;
-  gap: 2px;
-}
-.vault-overline,
-.sidebar-section-heading,
-.tree-group-label {
-  color: var(--muted-foreground);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-}
-.vault-copy strong {
-  overflow: hidden;
-  color: var(--foreground);
-  font-size: 13px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.text-subtle {
-  color: #989b94;
-}
-.sidebar-section-heading {
+
+.sidebar-search {
   display: flex;
-  height: 42px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 5px 2px 8px;
-}
-.sidebar-actions {
-  display: flex;
-  gap: 2px;
-}
-.tiny-icon-button {
-  width: 25px;
-  height: 25px;
-}
-.search-box {
-  display: flex;
-  height: 33px;
+  height: 32px;
   align-items: center;
   gap: 8px;
-  margin: 2px 1px 10px;
   padding: 0 9px;
   border: 1px solid var(--input);
   border-radius: var(--radius);
   color: var(--muted-foreground);
-  background: var(--background);
-}
-.search-box:focus-within {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px oklch(0.708 0 0 / 30%);
-}
-.search-box input {
-  width: 100%;
-  min-width: 0;
-  color: var(--foreground);
   font-size: 12px;
 }
-.search-box input::placeholder {
+
+.sidebar-empty {
+  padding: 4px;
   color: var(--muted-foreground);
-}
-.search-clear-button {
-  width: 24px;
-  height: 24px;
-  color: #888;
-}
-.file-tree {
-  overflow: auto;
-  flex: 1;
-  padding: 1px 0;
-}
-.tree-group-label {
-  padding: 6px 9px;
-}
-.tree-empty {
-  padding: 10px 8px;
-  color: #999b94;
   font-size: 12px;
-  line-height: 1.6;
-}
-.sidebar-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 3px 0 7px;
-  border-top: 1px solid var(--border);
-}
-.vault-location {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 7px;
-  color: var(--muted-foreground);
-  font-size: 11px;
-}
-.vault-location span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.status-dot {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 6px;
-  border-radius: 50%;
-  background: oklch(0.65 0.15 145);
-}
-.sidebar-resize-handle {
-  position: absolute;
-  z-index: 10;
-  top: 0;
-  right: -4px;
-  width: 8px;
-  height: 100%;
-  cursor: col-resize;
-  outline: none;
-}
-.sidebar-resize-handle::after {
-  position: absolute;
-  top: 0;
-  right: 3px;
-  width: 2px;
-  height: 100%;
-  background: var(--ring);
-  content: "";
-  opacity: 0;
-  transition: opacity 120ms ease;
-}
-.sidebar-resize-handle:hover::after,
-.sidebar-resize-handle:focus-visible::after,
-.sidebar-resize-handle-active::after {
-  opacity: 1;
-}
-.sidebar-resize-handle:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--ring);
-}
-@media (max-width: 1000px) {
-  .sidebar {
-    flex-basis: 235px;
-  }
+  line-height: 1.5;
 }
