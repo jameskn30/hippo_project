@@ -10,6 +10,7 @@
 
 .vault-tree .MuiTreeItem-content {
   min-height: 30px;
+  padding-inline: 8px;
   border-radius: var(--radius);
 }
 
