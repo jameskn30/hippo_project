@@ -50,13 +50,12 @@ export function Sidebar({
           </Box>
         </Box>
 
-        <Divider />
-
         <section className="sidebar-section" aria-labelledby="sidebar-notes-heading">
           <Box className="sidebar-tree-header">
             <Typography className="sidebar-section-title" component="h2" id="sidebar-notes-heading">
               Notes
             </Typography>
+
             <Box className="sidebar-action-group">
               <Tooltip title="Reveal in Finder">
                 <span>
