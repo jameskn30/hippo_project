@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State};
 
@@ -133,7 +134,11 @@ fn safe_name(name: &str) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
-fn collect_entries(root: &Path, folder: &Path, entries: &mut Vec<VaultEntry>) -> Result<(), String> {
+fn collect_entries(
+    root: &Path,
+    folder: &Path,
+    entries: &mut Vec<VaultEntry>,
+) -> Result<(), String> {
     let mut children = fs::read_dir(folder)
         .map_err(|error| error.to_string())?
         .filter_map(Result::ok)
@@ -176,7 +181,9 @@ fn get_vault(state: State<'_, AppState>) -> Result<Option<String>, String> {
         .vault_path
         .lock()
         .map_err(|_| "Could not access the current vault".to_string())?;
-    Ok(path.as_ref().map(|value| value.to_string_lossy().into_owned()))
+    Ok(path
+        .as_ref()
+        .map(|value| value.to_string_lossy().into_owned()))
 }
 
 #[tauri::command]
@@ -201,15 +208,29 @@ fn open_vault(path: String, app: AppHandle, state: State<'_, AppState>) -> Resul
 }
 
 #[tauri::command]
+fn reveal_vault(state: State<'_, AppState>) -> Result<(), String> {
+    let vault = current_vault(&state)?;
+
+    #[cfg(target_os = "macos")]
+    let mut command = Command::new("open");
+    #[cfg(target_os = "windows")]
+    let mut command = Command::new("explorer");
+    #[cfg(target_os = "linux")]
+    let mut command = Command::new("xdg-open");
+
+    command
+        .arg(vault)
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| format!("Could not reveal the vault: {error}"))
+}
+
+#[tauri::command]
 fn list_vault(state: State<'_, AppState>) -> Result<Vec<VaultEntry>, String> {
     let root = current_vault(&state)?;
     let mut entries = Vec::new();
     collect_entries(&root, &root, &mut entries)?;
-    entries.sort_by(|left, right| {
-        left.path
-            .to_lowercase()
-            .cmp(&right.path.to_lowercase())
-    });
+    entries.sort_by(|left, right| left.path.to_lowercase().cmp(&right.path.to_lowercase()));
     Ok(entries)
 }
 
@@ -260,7 +281,11 @@ fn save_note(
 }
 
 #[tauri::command]
-fn rename_note(path: String, new_title: String, state: State<'_, AppState>) -> Result<String, String> {
+fn rename_note(
+    path: String,
+    new_title: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
     let root = current_vault(&state)?;
     let source = existing_note_path(&root, &path)?;
     let name = safe_name(&new_title)?;
@@ -282,7 +307,11 @@ fn rename_note(path: String, new_title: String, state: State<'_, AppState>) -> R
 }
 
 #[tauri::command]
-fn rename_folder(path: String, new_title: String, state: State<'_, AppState>) -> Result<String, String> {
+fn rename_folder(
+    path: String,
+    new_title: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
     let root = current_vault(&state)?;
     let source = existing_folder_path(&root, &path)?;
     let destination = source.with_file_name(safe_name(&new_title)?);
@@ -298,7 +327,11 @@ fn rename_folder(path: String, new_title: String, state: State<'_, AppState>) ->
 }
 
 #[tauri::command]
-fn move_entry(path: String, target_folder: Option<String>, state: State<'_, AppState>) -> Result<String, String> {
+fn move_entry(
+    path: String,
+    target_folder: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
     let root = current_vault(&state)?;
     let source = existing_entry_path(&root, &path)?;
     let target = match target_folder {
@@ -373,6 +406,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_vault,
             open_vault,
+            reveal_vault,
             list_vault,
             read_note,
             create_note,

@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { openPath } from "@tauri-apps/plugin-opener";
+import { invoke } from "@tauri-apps/api/core";
 import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { type PropsWithChildren, useCallback, useMemo } from "react";
@@ -29,7 +29,7 @@ export function Dashboard({
   const revealVault = useCallback(async () => {
     if (!vaultPath) return;
     try {
-      await openPath(vaultPath);
+      await invoke("reveal_vault");
     } catch (error) {
       onError(error);
     }
