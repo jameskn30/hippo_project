@@ -1,8 +1,8 @@
 import { Box } from "@mui/material";
-import { invoke } from "@tauri-apps/api/core";
 import { type PropsWithChildren, useCallback } from "react";
 import { Sidebar } from "../Sidebar";
 import type { VaultEntry } from "@/lib/vault/types";
+import { revealVault as revealFilesystemVault } from "@/lib/filesystem";
 import "./styles.css";
 
 type DashboardProps = PropsWithChildren<{
@@ -11,6 +11,8 @@ type DashboardProps = PropsWithChildren<{
   vaultEntries: VaultEntry[];
   selectedPath: string | null;
   onOpenNote: (path: string) => void;
+  onCreateNote: () => void;
+  onCreateFolder: () => void;
   onError: (error: unknown) => void;
 }>;
 
@@ -21,12 +23,14 @@ export function Dashboard({
   vaultEntries,
   selectedPath,
   onOpenNote,
+  onCreateNote,
+  onCreateFolder,
   onError,
 }: DashboardProps) {
   const revealVault = useCallback(async () => {
     if (!vaultPath) return;
     try {
-      await invoke("reveal_vault");
+      await revealFilesystemVault();
     } catch (error) {
       onError(error);
     }
@@ -40,6 +44,8 @@ export function Dashboard({
         vaultEntries={vaultEntries}
         selectedPath={selectedPath}
         onOpenNote={onOpenNote}
+        onCreateNote={onCreateNote}
+        onCreateFolder={onCreateFolder}
         onRevealVault={() => void revealVault()}
       />
       <Box className="main-panel" component="main">

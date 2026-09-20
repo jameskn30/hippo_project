@@ -80,6 +80,11 @@
   margin-top: auto;
 }
 
+.sidebar-actions .MuiButton-root {
+  justify-content: flex-start;
+  text-transform: none;
+}
+
 .sidebar-footer-copy {
   overflow: hidden;
   padding: 0 4px;

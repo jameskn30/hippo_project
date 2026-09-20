@@ -1,11 +1,21 @@
-import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
 import { Dashboard } from "@/components/Dashboard";
 import { NoteView } from "@/components/NoteView";
 import { displayName } from "@/components/shared/note-utils";
-import type { NoteContent, NoteState, SaveState, VaultEntry } from "@/components/shared/types";
-import { listVault } from "@/lib/vault/client";
+import type { NoteState, SaveState, VaultEntry } from "@/components/shared/types";
+import {
+  createFolder as createFilesystemFolder,
+  createNoteFile,
+  deleteNote,
+  getVault,
+  listVault,
+  openVault,
+  readNote,
+  renameFolder,
+  renameNote,
+  saveNote,
+} from "@/lib/filesystem";
 import { Toast } from "@/components/Toast";
 import { Topbar } from "@/components/Topbar";
 import { WelcomeState } from "@/components/WelcomeState";
@@ -31,7 +41,7 @@ function App() {
   }, []);
 
   const loadNote = useCallback(async (path: string) => {
-    const result = await invoke<NoteContent>("read_note", { path });
+    const result = await readNote(path);
     setNote({ ...result, savedContent: result.content });
     setReading(false);
     setSaveState("saved");
@@ -40,11 +50,7 @@ function App() {
   const persistNote = useCallback(async (current: NoteState) => {
     if (current.content === current.savedContent) return;
     setSaveState("saving");
-    await invoke("save_note", {
-      path: current.path,
-      content: current.content,
-      expectedContent: current.savedContent,
-    });
+    await saveNote(current);
     setNote((latest) =>
       latest?.path === current.path ? { ...latest, savedContent: current.content } : latest,
     );
@@ -56,7 +62,7 @@ function App() {
       const selected = await open({ directory: true, multiple: false });
       if (typeof selected !== "string") return;
       if (note && note.content !== note.savedContent) await persistNote(note);
-      setVaultPath(await invoke<string>("open_vault", { path: selected }));
+      setVaultPath(await openVault(selected));
       setNote(null);
       await refreshVault();
     } catch (error) {
@@ -70,7 +76,7 @@ function App() {
       for (let index = 1; index <= 100; index += 1) {
         const title = index === 1 ? "Untitled" : `Untitled ${index}`;
         try {
-          const path = await invoke<string>("create_note", { title });
+          const path = await createNoteFile(title);
           await refreshVault();
           await loadNote(path);
           return;
@@ -85,7 +91,7 @@ function App() {
   }, [chooseVault, loadNote, refreshVault, showError, vaultPath]);
 
   useEffect(() => {
-    invoke<string | null>("get_vault")
+    getVault()
       .then(async (path) => {
         if (path) {
           setVaultPath(path);
@@ -156,7 +162,7 @@ function App() {
       for (let index = 1; index <= 100; index += 1) {
         const name = index === 1 ? "New folder" : `New folder ${index}`;
         try {
-          await invoke("create_folder", { name });
+          await createFilesystemFolder(name);
           await refreshVault();
           return;
         } catch (error) {
@@ -176,10 +182,7 @@ function App() {
           note &&
           (entry.isDirectory ? note.path.startsWith(`${entry.path}/`) : note.path === entry.path);
         if (activeNoteIsRenamed && note.content !== note.savedContent) await persistNote(note);
-        const path = await invoke<string>(entry.isDirectory ? "rename_folder" : "rename_note", {
-          path: entry.path,
-          newTitle,
-        });
+        const path = await (entry.isDirectory ? renameFolder : renameNote)(entry.path, newTitle);
         await refreshVault();
         if (note?.path === entry.path) await loadNote(path);
         if (entry.isDirectory && note?.path.startsWith(`${entry.path}/`)) {
@@ -200,7 +203,7 @@ function App() {
     if (!note || !window.confirm(`Permanently delete “${displayName(note.path)}” from this vault?`))
       return;
     try {
-      await invoke("delete_note", { path: note.path });
+      await deleteNote(note.path);
       setNote(null);
       await refreshVault();
     } catch (error) {
@@ -216,6 +219,8 @@ function App() {
         vaultEntries={vaultEntries}
         selectedPath={note?.path ?? null}
         onOpenNote={(path) => void openNote(path)}
+        onCreateNote={() => void createNote()}
+        onCreateFolder={() => void createFolder()}
         onError={showError}
       >
         <Topbar
@@ -224,8 +229,6 @@ function App() {
           saveState={saveState}
           sidebarOpen={sidebarOpen}
           onSidebarToggle={() => setSidebarOpen((open) => !open)}
-          onChooseVault={() => void chooseVault()}
-          onCreateNote={() => void createNote()}
         />
         {note ? (
           <NoteView

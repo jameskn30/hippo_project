@@ -1,5 +1,5 @@
-import { AppBar, Box, Button, Chip, IconButton, Toolbar, Tooltip, Typography } from "@mui/material";
-import { FilePlus2, FolderOpen, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { AppBar, Box, Chip, IconButton, Toolbar, Tooltip, Typography } from "@mui/material";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import "./styles.css";
 import { displayName } from "../shared/note-utils";
 import type { NoteState, SaveState } from "../shared/types";
@@ -10,19 +10,9 @@ type TopbarProps = {
   saveState: SaveState;
   sidebarOpen: boolean;
   onSidebarToggle: () => void;
-  onChooseVault: () => void;
-  onCreateNote: () => void;
 };
 
-export function Topbar({
-  vaultPath,
-  note,
-  saveState,
-  sidebarOpen,
-  onSidebarToggle,
-  onChooseVault,
-  onCreateNote,
-}: TopbarProps) {
+export function Topbar({ vaultPath, note, saveState, sidebarOpen, onSidebarToggle }: TopbarProps) {
   const saveLabel =
     saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving…" : "Save issue";
 
@@ -62,23 +52,6 @@ export function Topbar({
               variant="outlined"
             />
           )}
-          <Button
-            onClick={onChooseVault}
-            size="small"
-            startIcon={<FolderOpen size={16} />}
-            variant="outlined"
-          >
-            Open vault
-          </Button>
-          <Button
-            disabled={!vaultPath}
-            onClick={onCreateNote}
-            size="small"
-            startIcon={<FilePlus2 size={16} />}
-            variant="contained"
-          >
-            New document
-          </Button>
         </Box>
       </Toolbar>
     </AppBar>

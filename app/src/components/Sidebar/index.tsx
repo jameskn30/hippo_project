@@ -1,5 +1,5 @@
-import { Avatar, Box, Button, Divider, Drawer, Typography } from "@mui/material";
-import { FolderOpen } from "lucide-react";
+import { Avatar, Box, Button, ButtonGroup, Divider, Drawer, Typography } from "@mui/material";
+import { FilePlus2, FolderOpen, FolderPlus } from "lucide-react";
 import type { VaultEntry } from "@/lib/vault/types";
 import { VaultTree } from "./VaultTree";
 import "./styles.css";
@@ -10,6 +10,8 @@ type SidebarProps = {
   vaultEntries: VaultEntry[];
   selectedPath: string | null;
   onRevealVault: () => void;
+  onCreateNote: () => void;
+  onCreateFolder: () => void;
   onOpenNote: (path: string) => void;
 };
 
@@ -19,6 +21,8 @@ export function Sidebar({
   vaultEntries,
   selectedPath,
   onRevealVault,
+  onCreateNote,
+  onCreateFolder,
   onOpenNote,
 }: SidebarProps) {
   return (
@@ -55,17 +59,23 @@ export function Sidebar({
 
         <Box className="sidebar-footer">
           <Divider />
-          <Button
-            className="sidebar-reveal-vault"
+          <ButtonGroup
+            className="sidebar-actions"
             disabled={!vaultPath}
             fullWidth
-            onClick={onRevealVault}
-            size="small"
-            startIcon={<FolderOpen size={15} />}
+            orientation="vertical"
             variant="outlined"
           >
-            Reveal vault
-          </Button>
+            <Button onClick={onRevealVault} size="small" startIcon={<FolderOpen size={15} />}>
+              Reveal in Finder
+            </Button>
+            <Button onClick={onCreateNote} size="small" startIcon={<FilePlus2 size={15} />}>
+              New note
+            </Button>
+            <Button onClick={onCreateFolder} size="small" startIcon={<FolderPlus size={15} />}>
+              New folder
+            </Button>
+          </ButtonGroup>
           <Typography className="sidebar-footer-copy" variant="caption">
             {vaultPath ?? "Choose a vault to browse its files."}
           </Typography>
