@@ -1,5 +1,20 @@
 @import "./variables.css";
 
-.app-frame { display: flex; width: 100vw; height: 100vh; overflow: hidden; background: #faf9f6; }
-.main-panel { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-@media (max-width: 1000px) { .main-panel { min-width: 500px; } }
+.app-frame {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #faf9f6;
+}
+.main-panel {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+@media (max-width: 1000px) {
+  .main-panel {
+    min-width: 500px;
+  }
+}

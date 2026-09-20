@@ -13,7 +13,13 @@ export function IconButton({ className, label, children, ...props }: IconButtonP
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button className={cn("icon-button", className)} variant="ghost" size="icon-sm" aria-label={label} {...props}>
+        <Button
+          className={cn("icon-button", className)}
+          variant="ghost"
+          size="icon-sm"
+          aria-label={label}
+          {...props}
+        >
           {children}
         </Button>
       </TooltipTrigger>

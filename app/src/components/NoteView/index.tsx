@@ -34,7 +34,12 @@ export function NoteView({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [isRenamingTitle, setIsRenamingTitle] = useState(false);
   const [title, setTitle] = useState(() => displayName(note.path));
-  const saveStatus = saveState === "saved" ? "All changes saved" : saveState === "saving" ? "Saving changes" : "Check save status";
+  const saveStatus =
+    saveState === "saved"
+      ? "All changes saved"
+      : saveState === "saving"
+        ? "Saving changes"
+        : "Check save status";
 
   useEffect(() => {
     if (reading) return;
@@ -69,20 +74,36 @@ export function NoteView({
   return (
     <>
       <div className="note-toolbar">
-        <div className="note-path"><span className="path-label">{note.path}</span></div>
+        <div className="note-path">
+          <span className="path-label">{note.path}</span>
+        </div>
         <div className="note-actions">
-          <Tabs value={reading ? "read" : "edit"} onValueChange={(value) => onReadingChange(value === "read")}>
+          <Tabs
+            value={reading ? "read" : "edit"}
+            onValueChange={(value) => onReadingChange(value === "read")}
+          >
             <TabsList className="view-switch" aria-label="Note view">
-              <TabsTrigger value="edit"><Pencil size={14} /> Edit</TabsTrigger>
-              <TabsTrigger value="read"><BookOpen size={14} /> Read</TabsTrigger>
+              <TabsTrigger value="edit">
+                <Pencil size={14} /> Edit
+              </TabsTrigger>
+              <TabsTrigger value="read">
+                <BookOpen size={14} /> Read
+              </TabsTrigger>
             </TabsList>
           </Tabs>
-          <IconButton label="Rename note" onClick={startRenamingTitle}><Pencil size={15} /></IconButton>
-          <IconButton className="danger-hover" label="Delete note" onClick={onDelete}><Trash2 size={15} /></IconButton>
+          <IconButton label="Rename note" onClick={startRenamingTitle}>
+            <Pencil size={15} />
+          </IconButton>
+          <IconButton className="danger-hover" label="Delete note" onClick={onDelete}>
+            <Trash2 size={15} />
+          </IconButton>
         </div>
       </div>
       <section className="note-scroll-area">
-        <article className={`note-document ${reading ? "note-reading" : "note-editing"}`} style={{ "--note-font-size": `${fontSize}px` } as CSSProperties}>
+        <article
+          className={`note-document ${reading ? "note-reading" : "note-editing"}`}
+          style={{ "--note-font-size": `${fontSize}px` } as CSSProperties}
+        >
           <div className="note-heading-row">
             <FileText className="note-heading-icon" size={18} />
             <div className="note-title-container">
@@ -105,8 +126,22 @@ export function NoteView({
                 />
               ) : (
                 <div className="note-title-row">
-                  <h1><button className="note-title-button" type="button" onClick={startRenamingTitle}>{displayName(note.path)}</button></h1>
-                  <IconButton className="note-title-edit" label="Rename note" onClick={startRenamingTitle}><Pencil size={13} /></IconButton>
+                  <h1>
+                    <button
+                      className="note-title-button"
+                      type="button"
+                      onClick={startRenamingTitle}
+                    >
+                      {displayName(note.path)}
+                    </button>
+                  </h1>
+                  <IconButton
+                    className="note-title-edit"
+                    label="Rename note"
+                    onClick={startRenamingTitle}
+                  >
+                    <Pencil size={13} />
+                  </IconButton>
                 </div>
               )}
             </div>

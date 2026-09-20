@@ -18,7 +18,8 @@ import "./styles.css";
 const FILE_ROW_HEIGHT = 31;
 const FOLDER_ROW_HEIGHT = 40;
 const ROOT_DROP_ZONE_ID = "hippo-vault-root";
-const reorderZoneId = (path: string, position: "above" | "below") => `hippo-reorder:${position}:${path}`;
+const reorderZoneId = (path: string, position: "above" | "below") =>
+  `hippo-reorder:${position}:${path}`;
 const folderHeaderZoneId = (path: string) => `hippo-folder-target:${path}`;
 
 type NoteTreeProps = {
@@ -72,18 +73,34 @@ function TreeItem({
     collisionPriority: depth,
   });
 
-  const sameParentAsActive = activeEntry && (
-    (activeEntry.path.includes("/") ? activeEntry.path.slice(0, activeEntry.path.lastIndexOf("/")) : "")
-      === (node.path.includes("/") ? node.path.slice(0, node.path.lastIndexOf("/")) : "")
-  );
+  const sameParentAsActive =
+    activeEntry &&
+    (activeEntry.path.includes("/")
+      ? activeEntry.path.slice(0, activeEntry.path.lastIndexOf("/"))
+      : "") === (node.path.includes("/") ? node.path.slice(0, node.path.lastIndexOf("/")) : "");
   const isValidReorderTarget = Boolean(sameParentAsActive && activeEntry?.path !== node.path);
-  const aboveZone = useDroppable({ id: reorderZoneId(node.path, "above"), disabled: !isValidReorderTarget, collisionPriority: 100 + depth });
-  const belowZone = useDroppable({ id: reorderZoneId(node.path, "below"), disabled: !isValidReorderTarget, collisionPriority: 100 + depth });
-  const folderHeaderZone = useDroppable({ id: folderHeaderZoneId(node.path), disabled: !node.isDirectory, collisionPriority: 50 + depth });
+  const aboveZone = useDroppable({
+    id: reorderZoneId(node.path, "above"),
+    disabled: !isValidReorderTarget,
+    collisionPriority: 100 + depth,
+  });
+  const belowZone = useDroppable({
+    id: reorderZoneId(node.path, "below"),
+    disabled: !isValidReorderTarget,
+    collisionPriority: 100 + depth,
+  });
+  const folderHeaderZone = useDroppable({
+    id: folderHeaderZoneId(node.path),
+    disabled: !node.isDirectory,
+    collisionPriority: 50 + depth,
+  });
 
-  useEffect(() => () => {
-    if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
+    },
+    [],
+  );
 
   const draggableRowRef = (element: HTMLDivElement | null) => {
     draggableRef(element);
@@ -125,12 +142,18 @@ function TreeItem({
   };
 
   return (
-    <div className="tree-item" style={node.isDirectory ? { height: `${folderDropZoneHeight}px` } : undefined}>
-      {node.isDirectory && <div ref={droppableRef} className="tree-folder-dropzone" aria-hidden="true" />}
+    <div
+      className="tree-item"
+      style={node.isDirectory ? { height: `${folderDropZoneHeight}px` } : undefined}
+    >
+      {node.isDirectory && (
+        <div ref={droppableRef} className="tree-folder-dropzone" aria-hidden="true" />
+      )}
       {isRenaming ? (
         <div className="tree-row tree-row-renaming" style={{ paddingLeft: `${12 + depth * 15}px` }}>
           <span className="tree-caret">
-            {node.isDirectory && (expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
+            {node.isDirectory &&
+              (expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
           </span>
           {!node.isDirectory && <FileText size={15} />}
           <Input
@@ -151,7 +174,11 @@ function TreeItem({
         </div>
       ) : (
         <div ref={draggableRowRef} className="tree-row-host">
-          <div ref={aboveZone.ref} className={`tree-reorder-zone tree-reorder-zone-above ${aboveZone.isDropTarget ? "tree-reorder-zone-active" : ""}`} aria-hidden="true" />
+          <div
+            ref={aboveZone.ref}
+            className={`tree-reorder-zone tree-reorder-zone-above ${aboveZone.isDropTarget ? "tree-reorder-zone-active" : ""}`}
+            aria-hidden="true"
+          />
           <Button
             className={`tree-row ${node.isDirectory ? "tree-folder-row" : ""} ${selected ? "tree-row-selected" : ""} ${isDragging ? "tree-row-dragging" : ""} ${isDropTarget || folderHeaderZone.isDropTarget ? "tree-row-drop-target" : ""}`}
             variant="ghost"
@@ -161,36 +188,50 @@ function TreeItem({
             aria-expanded={node.isDirectory ? expanded : undefined}
           >
             <span className="tree-caret">
-              {node.isDirectory && (expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
+              {node.isDirectory &&
+                (expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
             </span>
             {!node.isDirectory && <FileText size={15} />}
             <span className="tree-label">{displayName(node.name)}</span>
           </Button>
-          <div ref={belowZone.ref} className={`tree-reorder-zone tree-reorder-zone-below ${belowZone.isDropTarget ? "tree-reorder-zone-active" : ""}`} aria-hidden="true" />
+          <div
+            ref={belowZone.ref}
+            className={`tree-reorder-zone tree-reorder-zone-below ${belowZone.isDropTarget ? "tree-reorder-zone-active" : ""}`}
+            aria-hidden="true"
+          />
         </div>
       )}
-      {node.isDirectory && expanded && node.children.map((child) => (
-        <TreeItem
-          key={child.path}
-          node={child}
-          depth={depth + 1}
-          selectedPath={selectedPath}
-          isFolderExpanded={isFolderExpanded}
-          onFolderExpandedChange={onFolderExpandedChange}
-          onOpen={onOpen}
-          onRename={onRename}
-          canMoveToFolder={canMoveToFolder}
-          calculateFolderDropZoneHeight={calculateFolderDropZoneHeight}
-          activeEntry={activeEntry}
-        />
-      ))}
+      {node.isDirectory &&
+        expanded &&
+        node.children.map((child) => (
+          <TreeItem
+            key={child.path}
+            node={child}
+            depth={depth + 1}
+            selectedPath={selectedPath}
+            isFolderExpanded={isFolderExpanded}
+            onFolderExpandedChange={onFolderExpandedChange}
+            onOpen={onOpen}
+            onRename={onRename}
+            canMoveToFolder={canMoveToFolder}
+            calculateFolderDropZoneHeight={calculateFolderDropZoneHeight}
+            activeEntry={activeEntry}
+          />
+        ))}
     </div>
   );
 }
 
 function TreeRootDropZone({ children }: { children: React.ReactNode }) {
   const { ref, isDropTarget } = useDroppable({ id: ROOT_DROP_ZONE_ID, collisionPriority: -1 });
-  return <div ref={ref} className={`tree-root-dropzone ${isDropTarget ? "tree-root-dropzone-active" : ""}`}>{children}</div>;
+  return (
+    <div
+      ref={ref}
+      className={`tree-root-dropzone ${isDropTarget ? "tree-root-dropzone-active" : ""}`}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function NoteTree({
@@ -206,10 +247,11 @@ export function NoteTree({
   const [activeEntry, setActiveEntry] = useState<VaultEntry | null>(null);
   const entriesByPath = useMemo(() => {
     const entries = new Map<string, VaultEntry>();
-    const visit = (items: TreeNode[]) => items.forEach((item) => {
-      entries.set(item.path, item);
-      visit(item.children);
-    });
+    const visit = (items: TreeNode[]) =>
+      items.forEach((item) => {
+        entries.set(item.path, item);
+        visit(item.children);
+      });
     visit(nodes);
     return entries;
   }, [nodes]);
@@ -230,41 +272,59 @@ export function NoteTree({
   }, [entriesByPath]);
 
   const canMoveToFolder = (entry: VaultEntry, folder: VaultEntry) => {
-    const entryParentPath = entry.path.includes("/") ? entry.path.slice(0, entry.path.lastIndexOf("/")) : "";
-    return folder.isDirectory
-      && folder.path !== entryParentPath
-      && folder.path !== entry.path
-      && (!entry.isDirectory || !folder.path.startsWith(`${entry.path}/`));
+    const entryParentPath = entry.path.includes("/")
+      ? entry.path.slice(0, entry.path.lastIndexOf("/"))
+      : "";
+    return (
+      folder.isDirectory &&
+      folder.path !== entryParentPath &&
+      folder.path !== entry.path &&
+      (!entry.isDirectory || !folder.path.startsWith(`${entry.path}/`))
+    );
   };
 
   const calculateFolderDropZoneHeight = (folder: TreeNode): number => {
     if (!isFolderExpanded(folder.path)) return FOLDER_ROW_HEIGHT;
-    return FOLDER_ROW_HEIGHT + folder.children.reduce((height, child) => {
-      if (!child.isDirectory) return height + FILE_ROW_HEIGHT;
-      return height + calculateFolderDropZoneHeight(child);
-    }, 0);
+    return (
+      FOLDER_ROW_HEIGHT +
+      folder.children.reduce((height, child) => {
+        if (!child.isDirectory) return height + FILE_ROW_HEIGHT;
+        return height + calculateFolderDropZoneHeight(child);
+      }, 0)
+    );
   };
 
   return (
     <DragDropProvider
       sensors={(defaults) => [
         ...defaults.filter((sensor) => sensor !== PointerSensor),
-        PointerSensor.configure({ activationConstraints: [new PointerActivationConstraints.Distance({ value: 8 })] }),
+        PointerSensor.configure({
+          activationConstraints: [new PointerActivationConstraints.Distance({ value: 8 })],
+        }),
         KeyboardSensor,
       ]}
-      onDragStart={(event) => setActiveEntry(entriesByPath.get(String(event.operation.source?.id)) ?? null)}
+      onDragStart={(event) =>
+        setActiveEntry(entriesByPath.get(String(event.operation.source?.id)) ?? null)
+      }
       onDragEnd={(event) => {
         const source = entriesByPath.get(String(event.operation.source?.id));
         const targetId = String(event.operation.target?.id ?? "");
         const reorderTarget = reorderTargets.get(targetId);
         const isRootTarget = targetId === ROOT_DROP_ZONE_ID;
-        const target = isRootTarget ? null : folderHeaderTargets.get(targetId) ?? entriesByPath.get(targetId) ?? null;
+        const target = isRootTarget
+          ? null
+          : (folderHeaderTargets.get(targetId) ?? entriesByPath.get(targetId) ?? null);
         setActiveEntry(null);
         if (!event.canceled && source && reorderTarget) {
           onReorder(source, reorderTarget.entry, reorderTarget.position);
           return;
         }
-        if (!event.canceled && source && (isRootTarget || (target && canMoveToFolder(source, target)))) void onMove(source, target);
+        if (
+          !event.canceled &&
+          source &&
+          (isRootTarget || (target && canMoveToFolder(source, target)))
+        )
+          void onMove(source, target);
       }}
     >
       <TreeRootDropZone>
@@ -284,7 +344,11 @@ export function NoteTree({
           />
         ))}
       </TreeRootDropZone>
-      <DragOverlay>{activeEntry ? <div className="tree-drag-overlay">{displayName(activeEntry.name)}</div> : null}</DragOverlay>
+      <DragOverlay>
+        {activeEntry ? (
+          <div className="tree-drag-overlay">{displayName(activeEntry.name)}</div>
+        ) : null}
+      </DragOverlay>
     </DragDropProvider>
   );
 }

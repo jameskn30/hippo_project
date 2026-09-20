@@ -27,6 +27,22 @@ app-dev:
 app-show:
     open app/src-tauri/target/debug/hippo-app
 
+# Format the desktop client source.
+app-format:
+    cd app && bun run format
+
+# Run the desktop client linter.
+app-lint:
+    cd app && bun run lint
+
+# Check formatting, imports, and lint rules for the desktop client.
+app-check:
+    cd app && bun run check
+
+# Apply safe formatting, import organization, and lint fixes to the desktop client.
+app-fix:
+    cd app && bun run fix
+
 # Build a distributable desktop app for this platform.
 app-build:
     cd app && bun run tauri build

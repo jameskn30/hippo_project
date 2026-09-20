@@ -37,6 +37,10 @@ cd hippo_project
 ```sh
 just app-setup  # Install frontend dependencies
 just app-dev    # Run the Tauri desktop app
+just app-format # Format desktop client code
+just app-lint   # Report desktop client lint issues
+just app-check  # Check formatting, imports, and lint rules
+just app-fix    # Apply safe code fixes
 just app-build  # Build a desktop bundle for this platform
 ```
 
