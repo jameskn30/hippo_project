@@ -1,6 +1,7 @@
 import {
   Avatar,
   Box,
+  Button,
   Divider,
   Drawer,
   InputAdornment,
@@ -11,14 +12,16 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { Clock3, FileText, Search } from "lucide-react";
+import { Clock3, FileText, FolderOpen, Search } from "lucide-react";
 import "./styles.css";
 
 type SidebarProps = {
   open: boolean;
+  vaultPath: string | null;
+  onRevealVault: () => void;
 };
 
-export function Sidebar({ open }: SidebarProps) {
+export function Sidebar({ open, vaultPath, onRevealVault }: SidebarProps) {
   return (
     <Drawer
       anchor="left"
@@ -83,8 +86,19 @@ export function Sidebar({ open }: SidebarProps) {
 
         <Box className="sidebar-footer">
           <Divider />
+          <Button
+            className="sidebar-reveal-vault"
+            disabled={!vaultPath}
+            fullWidth
+            onClick={onRevealVault}
+            size="small"
+            startIcon={<FolderOpen size={15} />}
+            variant="outlined"
+          >
+            Reveal vault
+          </Button>
           <Typography className="sidebar-footer-copy" variant="caption">
-            Markdown files stay on this device.
+            {vaultPath ?? "Choose a vault to browse its files."}
           </Typography>
         </Box>
       </Box>

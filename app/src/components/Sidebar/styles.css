@@ -125,8 +125,11 @@
 }
 
 .sidebar-footer-copy {
+  overflow: hidden;
   padding: 0 4px;
   color: var(--muted-foreground);
   font-size: 11px;
   line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

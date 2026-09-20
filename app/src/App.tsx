@@ -181,7 +181,7 @@ function App() {
 
   return (
     <>
-      <Dashboard sidebarOpen={sidebarOpen}>
+      <Dashboard sidebarOpen={sidebarOpen} vaultPath={vaultPath} onError={showError}>
         <Topbar
           vaultPath={vaultPath}
           note={note}
