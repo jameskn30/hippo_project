@@ -9,10 +9,10 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NoteTree } from "../NoteTree";
-import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/IconButton";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NoteTree } from "../NoteTree";
 import { displayName, formatVaultPath } from "../shared/note-utils";
 import type { TreeNode, VaultEntry } from "../shared/types";
 import "./styles.css";

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { AtomicCodeMirrorEditor } from "@atomic-editor/editor";
 import type { AtomicCodeMirrorEditorHandle } from "@atomic-editor/editor";
+import { AtomicCodeMirrorEditor } from "@atomic-editor/editor";
 import { BookOpen, FileText, Pencil, Trash2 } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { IconButton } from "@/components/IconButton";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { displayName } from "../shared/note-utils";
 import type { NoteState, SaveState } from "../shared/types";
 import "./styles.css";

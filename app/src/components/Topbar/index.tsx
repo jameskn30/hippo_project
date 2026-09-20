@@ -1,6 +1,6 @@
 import { Check, FilePlus2, FolderOpen, Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/IconButton";
+import { Button } from "@/components/ui/button";
 import "./styles.css";
 import { displayName } from "../shared/note-utils";
 import type { NoteState, SaveState } from "../shared/types";

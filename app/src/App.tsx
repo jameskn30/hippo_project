@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NoteView } from "@/components/NoteView";
 import { Sidebar } from "@/components/Sidebar";
 import { buildTree, displayName } from "@/components/shared/note-utils";

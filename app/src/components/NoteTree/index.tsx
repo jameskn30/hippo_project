@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, FileText } from "lucide-react";
+import { PointerActivationConstraints } from "@dnd-kit/dom";
 import {
   DragDropProvider,
   DragOverlay,
@@ -8,11 +7,12 @@ import {
   useDraggable,
   useDroppable,
 } from "@dnd-kit/react";
-import { PointerActivationConstraints } from "@dnd-kit/dom";
-import { displayName } from "../shared/note-utils";
-import type { TreeNode, VaultEntry } from "../shared/types";
+import { ChevronDown, ChevronRight, FileText } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { displayName } from "../shared/note-utils";
+import type { TreeNode, VaultEntry } from "../shared/types";
 import "./styles.css";
 
 const FILE_ROW_HEIGHT = 31;

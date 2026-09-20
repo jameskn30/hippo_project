@@ -7,9 +7,9 @@
   flex: 0 0 276px;
   flex-direction: column;
   overflow: visible;
-  background: #f5f4f0;
+  background: oklch(0.985 0 0);
   border-right: 1px solid var(--line);
-  padding: 18px 12px 12px;
+  padding: 12px 8px 8px;
 }
 .brand-row {
   display: flex;
@@ -17,24 +17,23 @@
   align-items: center;
   gap: 9px;
   padding: 0 7px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 .brand-mark {
   display: grid;
   width: 25px;
   height: 25px;
   place-items: center;
-  color: white;
-  background: #617f65;
-  border-radius: 8px 8px 8px 3px;
-  font-family: Georgia, serif;
-  font-size: 18px;
-  font-weight: 700;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
 }
 .brand-name {
-  font-size: 16px;
-  font-weight: 650;
-  letter-spacing: -0.4px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 .sidebar-collapse {
   margin-left: auto;
@@ -44,15 +43,15 @@
   width: 100%;
   height: auto;
   align-items: center;
-  gap: 10px;
-  padding: 9px;
-  border: 1px solid #e8e7e1;
-  border-radius: 9px;
-  background: #fbfaf7;
+  gap: 8px;
+  padding: 8px;
+  border-color: var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
   text-align: left;
 }
 .vault-switcher:hover {
-  border-color: #d7d9cf;
+  background: var(--muted);
 }
 .vault-avatar {
   display: grid;
@@ -60,11 +59,11 @@
   height: 31px;
   flex: 0 0 31px;
   place-items: center;
-  background: #e5eadd;
-  color: #59745e;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 650;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 12px;
+  font-weight: 500;
 }
 .vault-copy {
   display: grid;
@@ -75,14 +74,14 @@
 .vault-overline,
 .sidebar-section-heading,
 .tree-group-label {
-  color: #93958e;
+  color: var(--muted-foreground);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
 }
 .vault-copy strong {
   overflow: hidden;
-  color: #000;
+  color: var(--foreground);
   font-size: 13px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -96,7 +95,7 @@
   height: 42px;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 5px 0 8px;
+  padding: 10px 5px 2px 8px;
 }
 .sidebar-actions {
   display: flex;
@@ -113,23 +112,23 @@
   gap: 8px;
   margin: 2px 1px 10px;
   padding: 0 9px;
-  border: 1px solid #e8e7e1;
-  border-radius: 7px;
-  color: #9b9d96;
-  background: #fbfaf7;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+  background: var(--background);
 }
 .search-box:focus-within {
-  border-color: #bdc9b7;
-  box-shadow: 0 0 0 2px #e8eee4;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px oklch(0.708 0 0 / 30%);
 }
 .search-box input {
   width: 100%;
   min-width: 0;
-  color: #000;
+  color: var(--foreground);
   font-size: 12px;
 }
 .search-box input::placeholder {
-  color: #a1a39d;
+  color: var(--muted-foreground);
 }
 .search-clear-button {
   width: 24px;
@@ -155,14 +154,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 3px 0 7px;
-  border-top: 1px solid #e8e7e1;
+  border-top: 1px solid var(--border);
 }
 .vault-location {
   display: flex;
   min-width: 0;
   align-items: center;
   gap: 7px;
-  color: #898d85;
+  color: var(--muted-foreground);
   font-size: 11px;
 }
 .vault-location span:last-child {
@@ -175,7 +174,7 @@
   height: 6px;
   flex: 0 0 6px;
   border-radius: 50%;
-  background: #85a27f;
+  background: oklch(0.65 0.15 145);
 }
 .sidebar-resize-handle {
   position: absolute;
@@ -193,7 +192,7 @@
   right: 3px;
   width: 2px;
   height: 100%;
-  background: #89a184;
+  background: var(--ring);
   content: "";
   opacity: 0;
   transition: opacity 120ms ease;
@@ -204,7 +203,7 @@
   opacity: 1;
 }
 .sidebar-resize-handle:focus-visible {
-  box-shadow: inset 0 0 0 2px #89a184;
+  box-shadow: inset 0 0 0 2px var(--ring);
 }
 @media (max-width: 1000px) {
   .sidebar {

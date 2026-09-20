@@ -1,7 +1,7 @@
 :root {
-  color: #000;
-  background: #faf9f6;
-  --line: #ebeae5;
+  color: oklch(0.145 0 0);
+  background: oklch(1 0 0);
+  --line: oklch(0.922 0 0);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
@@ -16,5 +16,5 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 }

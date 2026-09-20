@@ -6,29 +6,28 @@
   height: 33px;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  padding: 0 12px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  font-size: 11px;
-  font-weight: 600;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
   transition:
     background 0.15s,
     border-color 0.15s;
 }
 .button-primary {
-  color: white;
-  background: #5d795f;
-  box-shadow: 0 1px 1px #253c2820;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow: none;
 }
 .button-primary:hover {
-  background: #4f6b52;
+  background: oklch(0.3 0 0);
 }
 .button-secondary {
-  border-color: #e5e4de;
-  color: #000;
-  background: #fbfaf7;
+  border-color: var(--border);
+  color: var(--foreground);
+  background: var(--background);
 }
 .button-secondary:hover {
-  background: #f1f0eb;
+  background: var(--muted);
 }
