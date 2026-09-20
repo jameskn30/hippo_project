@@ -219,6 +219,9 @@ function App() {
         vaultEntries={vaultEntries}
         selectedPath={note?.path ?? null}
         onOpenNote={(path) => void openNote(path)}
+        onRenameEntry={(path, isDirectory, title) =>
+          renameTreeEntry({ name: path, path, isDirectory }, title)
+        }
         onCreateNote={() => void createNote()}
         onCreateFolder={() => void createFolder()}
         onError={showError}

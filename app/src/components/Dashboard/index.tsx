@@ -11,6 +11,7 @@ type DashboardProps = PropsWithChildren<{
   vaultEntries: VaultEntry[];
   selectedPath: string | null;
   onOpenNote: (path: string) => void;
+  onRenameEntry: (path: string, isDirectory: boolean, title: string) => Promise<void>;
   onCreateNote: () => void;
   onCreateFolder: () => void;
   onError: (error: unknown) => void;
@@ -23,6 +24,7 @@ export function Dashboard({
   vaultEntries,
   selectedPath,
   onOpenNote,
+  onRenameEntry,
   onCreateNote,
   onCreateFolder,
   onError,
@@ -44,6 +46,7 @@ export function Dashboard({
         vaultEntries={vaultEntries}
         selectedPath={selectedPath}
         onOpenNote={onOpenNote}
+        onRenameEntry={onRenameEntry}
         onCreateNote={onCreateNote}
         onCreateFolder={onCreateFolder}
         onRevealVault={() => void revealVault()}

@@ -13,6 +13,7 @@ type SidebarProps = {
   onCreateNote: () => void;
   onCreateFolder: () => void;
   onOpenNote: (path: string) => void;
+  onRenameEntry: (path: string, isDirectory: boolean, title: string) => Promise<void>;
 };
 
 export function Sidebar({
@@ -24,6 +25,7 @@ export function Sidebar({
   onCreateNote,
   onCreateFolder,
   onOpenNote,
+  onRenameEntry,
 }: SidebarProps) {
   return (
     <Drawer
@@ -94,7 +96,12 @@ export function Sidebar({
               </Tooltip>
             </Box>
           </Box>
-          <VaultTree entries={vaultEntries} selectedPath={selectedPath} onOpenNote={onOpenNote} />
+          <VaultTree
+            entries={vaultEntries}
+            selectedPath={selectedPath}
+            onOpenNote={onOpenNote}
+            onRenameEntry={onRenameEntry}
+          />
         </section>
 
         <Box className="sidebar-footer">

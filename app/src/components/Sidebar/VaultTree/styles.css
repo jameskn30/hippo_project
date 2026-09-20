@@ -43,6 +43,24 @@
   color: var(--muted-foreground);
 }
 
+.vault-tree-file-label,
+.vault-tree-directory-label {
+  display: block;
+  min-width: 0;
+}
+
+.vault-tree-rename-input {
+  width: 100%;
+  min-width: 0;
+  padding: 1px 3px;
+  border: 1px solid var(--foreground);
+  border-radius: 3px;
+  color: var(--foreground);
+  background: var(--background);
+  font: inherit;
+  outline: none;
+}
+
 .vault-tree-empty {
   margin: 0;
   padding: 4px;
