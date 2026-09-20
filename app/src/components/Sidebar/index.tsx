@@ -1,27 +1,16 @@
-import {
-  Avatar,
-  Box,
-  Button,
-  Divider,
-  Drawer,
-  InputAdornment,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Clock3, FileText, FolderOpen, Search } from "lucide-react";
+import { Avatar, Box, Button, Divider, Drawer, Typography } from "@mui/material";
+import { FolderOpen } from "lucide-react";
+import type { ReactNode } from "react";
 import "./styles.css";
 
 type SidebarProps = {
   open: boolean;
   vaultPath: string | null;
+  tree: ReactNode;
   onRevealVault: () => void;
 };
 
-export function Sidebar({ open, vaultPath, onRevealVault }: SidebarProps) {
+export function Sidebar({ open, vaultPath, tree, onRevealVault }: SidebarProps) {
   return (
     <Drawer
       anchor="left"
@@ -51,38 +40,8 @@ export function Sidebar({ open, vaultPath, onRevealVault }: SidebarProps) {
           <Typography className="sidebar-section-title" component="h2" id="sidebar-notes-heading">
             Notes
           </Typography>
-          <TextField
-            className="sidebar-search"
-            fullWidth
-            placeholder="Search notes"
-            size="small"
-            slotProps={{
-              htmlInput: { readOnly: true },
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={16} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
+          {tree}
         </section>
-
-        <List className="sidebar-navigation" disablePadding aria-label="Note views">
-          <ListItem className="sidebar-navigation-item sidebar-navigation-item-selected">
-            <ListItemIcon>
-              <FileText size={17} />
-            </ListItemIcon>
-            <ListItemText primary="All notes" />
-          </ListItem>
-          <ListItem className="sidebar-navigation-item">
-            <ListItemIcon>
-              <Clock3 size={17} />
-            </ListItemIcon>
-            <ListItemText primary="Recent" />
-          </ListItem>
-        </List>
 
         <Box className="sidebar-footer">
           <Divider />
