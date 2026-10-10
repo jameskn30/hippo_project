@@ -22,6 +22,41 @@ type NoteViewProps = {
   onSave: () => void;
 };
 
+type NoteStatusBarProps = {
+  reading: boolean;
+  vimEnabled: boolean;
+  lineCount: number;
+  fontSize: number;
+  saveState: SaveState;
+};
+
+function NoteStatusBar({
+  reading,
+  vimEnabled,
+  lineCount,
+  fontSize,
+  saveState,
+}: NoteStatusBarProps) {
+  const saveStatus =
+    saveState === "saved"
+      ? "All changes saved"
+      : saveState === "saving"
+        ? "Saving changes"
+        : "Check save status";
+
+  return (
+    <footer className="statusbar">
+      <span>{reading ? "Reading view" : "Markdown"}</span>
+      {vimEnabled && !reading && <span>Vim: i to type · Esc for commands</span>}
+      <span>{lineCount} lines</span>
+      <span>Text {fontSize}px</span>
+      <span className="status-spacer" />
+      <span>{saveStatus}</span>
+      <span className="shortcut-hint">⌘ + / ⌘ − text size</span>
+    </footer>
+  );
+}
+
 export function NoteView({
   note,
   reading,
@@ -55,13 +90,6 @@ export function NoteView({
     }
     window.requestAnimationFrame(() => editorHandleRef.current?.focus());
   };
-  const saveStatus =
-    saveState === "saved"
-      ? "All changes saved"
-      : saveState === "saving"
-        ? "Saving changes"
-        : "Check save status";
-
   useEffect(() => {
     if (reading) return;
     const frame = window.requestAnimationFrame(() => editorHandleRef.current?.focus());
@@ -196,15 +224,13 @@ export function NoteView({
           </div>
         </article>
       </section>
-      <footer className="statusbar">
-        <span>{reading ? "Reading view" : "Markdown"}</span>
-        {vimEnabled && !reading && <span>Vim: i to type · Esc for commands</span>}
-        <span>{note.content.split("\n").length} lines</span>
-        <span>Text {fontSize}px</span>
-        <span className="status-spacer" />
-        <span>{saveStatus}</span>
-        <span className="shortcut-hint">⌘ + / ⌘ − text size</span>
-      </footer>
+      <NoteStatusBar
+        reading={reading}
+        vimEnabled={vimEnabled}
+        lineCount={note.content.split("\n").length}
+        fontSize={fontSize}
+        saveState={saveState}
+      />
     </>
   );
 }
