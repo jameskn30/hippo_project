@@ -1,11 +1,17 @@
 <mxfile host="Electron">
   <diagram name="Page-1" id="w6c0aPvMXex-kBZS_hCr">
-    <mxGraphModel dx="921" dy="671" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1825" dy="561" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="vnCwi_y8fAhXJ8vNWgv7-1" parent="1" style="whiteSpace=wrap;html=1;" value="Hippo Desktop App" vertex="1">
-          <mxGeometry height="60" width="120" x="180" y="310" as="geometry" />
+        <mxCell id="vnCwi_y8fAhXJ8vNWgv7-1" parent="1" style="whiteSpace=wrap;html=1;" value="Hippo Desktop App&lt;div&gt;built with Tauri&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="-360" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="-0iY5ebz4l4rNBR7c5y0-2" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;b&gt;Client app&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="60" x="-220" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="-0iY5ebz4l4rNBR7c5y0-3" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;b&gt;Core&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="60" x="110" y="220" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
