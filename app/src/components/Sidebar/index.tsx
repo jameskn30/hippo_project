@@ -1,5 +1,5 @@
 import { Avatar, Box, Divider, Drawer, IconButton, Tooltip, Typography } from "@mui/material";
-import { FilePlus2, FolderOpen, FolderPlus } from "lucide-react";
+import { FilePlus2, FolderOpen, FolderPlus, RefreshCw } from "lucide-react";
 import type { VaultEntry } from "@/lib/vault/types";
 import { VaultTree } from "./VaultTree";
 import "./styles.css";
@@ -8,10 +8,12 @@ type SidebarProps = {
   open: boolean;
   vaultPath: string | null;
   vaultEntries: VaultEntry[];
+  isReloadingVault: boolean;
   selectedPath: string | null;
   onRevealVault: () => void;
   onCreateNote: () => void;
   onCreateFolder: () => void;
+  onReloadVault: () => void;
   onOpenNote: (path: string) => void;
   onRenameEntry: (path: string, isDirectory: boolean, title: string) => Promise<void>;
 };
@@ -20,10 +22,12 @@ export function Sidebar({
   open,
   vaultPath,
   vaultEntries,
+  isReloadingVault,
   selectedPath,
   onRevealVault,
   onCreateNote,
   onCreateFolder,
+  onReloadVault,
   onOpenNote,
   onRenameEntry,
 }: SidebarProps) {
@@ -57,6 +61,19 @@ export function Sidebar({
             </Typography>
 
             <Box className="sidebar-action-group">
+              <Tooltip title={isReloadingVault ? "Reloading vault…" : "Reload vault"}>
+                <span>
+                  <IconButton
+                    aria-label="Reload vault"
+                    aria-busy={isReloadingVault}
+                    disabled={!vaultPath || isReloadingVault}
+                    onClick={onReloadVault}
+                    size="small"
+                  >
+                    <RefreshCw aria-hidden="true" size={15} />
+                  </IconButton>
+                </span>
+              </Tooltip>
               <Tooltip title="Reveal in Finder">
                 <span>
                   <IconButton

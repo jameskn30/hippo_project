@@ -24,6 +24,7 @@ import "@/styles/global/index.css";
 function App() {
   const [vaultPath, setVaultPath] = useState<string | null>(null);
   const [vaultEntries, setVaultEntries] = useState<VaultEntry[]>([]);
+  const [isReloadingVault, setIsReloadingVault] = useState(false);
   const [note, setNote] = useState<NoteState | null>(null);
   const [reading, setReading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -39,6 +40,18 @@ function App() {
   const refreshVault = useCallback(async () => {
     setVaultEntries(await listVault());
   }, []);
+
+  const reloadVault = useCallback(async () => {
+    if (!vaultPath || isReloadingVault) return;
+    setIsReloadingVault(true);
+    try {
+      await refreshVault();
+    } catch (error) {
+      showError(error);
+    } finally {
+      setIsReloadingVault(false);
+    }
+  }, [isReloadingVault, refreshVault, showError, vaultPath]);
 
   const loadNote = useCallback(async (path: string) => {
     const result = await readNote(path);
@@ -217,6 +230,7 @@ function App() {
         sidebarOpen={sidebarOpen}
         vaultPath={vaultPath}
         vaultEntries={vaultEntries}
+        isReloadingVault={isReloadingVault}
         selectedPath={note?.path ?? null}
         onOpenNote={(path) => void openNote(path)}
         onRenameEntry={(path, isDirectory, title) =>
@@ -224,6 +238,7 @@ function App() {
         }
         onCreateNote={() => void createNote()}
         onCreateFolder={() => void createFolder()}
+        onReloadVault={() => void reloadVault()}
         onError={showError}
       >
         <Topbar

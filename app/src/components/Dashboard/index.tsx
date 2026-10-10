@@ -9,11 +9,13 @@ type DashboardProps = PropsWithChildren<{
   sidebarOpen: boolean;
   vaultPath: string | null;
   vaultEntries: VaultEntry[];
+  isReloadingVault: boolean;
   selectedPath: string | null;
   onOpenNote: (path: string) => void;
   onRenameEntry: (path: string, isDirectory: boolean, title: string) => Promise<void>;
   onCreateNote: () => void;
   onCreateFolder: () => void;
+  onReloadVault: () => void;
   onError: (error: unknown) => void;
 }>;
 
@@ -22,11 +24,13 @@ export function Dashboard({
   sidebarOpen,
   vaultPath,
   vaultEntries,
+  isReloadingVault,
   selectedPath,
   onOpenNote,
   onRenameEntry,
   onCreateNote,
   onCreateFolder,
+  onReloadVault,
   onError,
 }: DashboardProps) {
   const revealVault = useCallback(async () => {
@@ -44,11 +48,13 @@ export function Dashboard({
         open={sidebarOpen}
         vaultPath={vaultPath}
         vaultEntries={vaultEntries}
+        isReloadingVault={isReloadingVault}
         selectedPath={selectedPath}
         onOpenNote={onOpenNote}
         onRenameEntry={onRenameEntry}
         onCreateNote={onCreateNote}
         onCreateFolder={onCreateFolder}
+        onReloadVault={onReloadVault}
         onRevealVault={() => void revealVault()}
       />
       <Box className="main-panel" component="main">
