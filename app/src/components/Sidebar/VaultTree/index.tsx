@@ -1,9 +1,10 @@
-import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
-import { TreeItem } from "@mui/x-tree-view/TreeItem";
-import type { TreeItemProps } from "@mui/x-tree-view/TreeItem";
 import { useTreeItemModel } from "@mui/x-tree-view/hooks";
+import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
+import type { TreeItemProps } from "@mui/x-tree-view/TreeItem";
+import { TreeItem } from "@mui/x-tree-view/TreeItem";
 import { ChevronRight } from "lucide-react";
 import { createContext, useContext, useMemo, useState } from "react";
+import { TreeViewItemMenuClicked } from "@/components/TreeViewItemMenuClicked";
 import type { VaultEntry, VaultTreeItem } from "@/lib/vault/types";
 import "./styles.css";
 
@@ -19,15 +20,22 @@ type RenameState = {
   title: string;
 };
 
-type VaultTreeRenameContextValue = {
+type ContextMenuState = {
+  item: VaultTreeItem;
+  top: number;
+  left: number;
+};
+
+type VaultTreeContextValue = {
   renameState: RenameState | null;
   startRename: (item: VaultTreeItem) => void;
   updateTitle: (title: string) => void;
   commitRename: () => void;
   cancelRename: () => void;
+  openContextMenu: (item: VaultTreeItem, top: number, left: number) => void;
 };
 
-const VaultTreeRenameContext = createContext<VaultTreeRenameContextValue | null>(null);
+const VaultTreeContext = createContext<VaultTreeContextValue | null>(null);
 
 function buildVaultTree(entries: VaultEntry[]): VaultTreeItem[] {
   const byPath = new Map<string, VaultTreeItem>();
@@ -72,7 +80,7 @@ function findItem(items: VaultTreeItem[], id: string): VaultTreeItem | undefined
 
 function VaultTreeItem(props: TreeItemProps) {
   const item = useTreeItemModel<VaultTreeItem>(props.itemId);
-  const rename = useContext(VaultTreeRenameContext);
+  const rename = useContext(VaultTreeContext);
   const isRenaming = rename?.renameState?.item.id === item?.id;
 
   const startRename = (event: React.MouseEvent) => {
@@ -110,14 +118,39 @@ function VaultTreeItem(props: TreeItemProps) {
     </span>
   );
 
-  return <TreeItem {...props} label={label} />;
+  return (
+    <TreeItem
+      {...props}
+      label={label}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget || !item || isRenaming) return;
+        if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const bounds = event.currentTarget.firstElementChild?.getBoundingClientRect();
+        if (bounds) rename?.openContextMenu(item, bounds.bottom, bounds.left);
+      }}
+      slotProps={{
+        content: {
+          onContextMenu: (event) => {
+            if (!item || isRenaming) return;
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.parentElement?.focus();
+            rename?.openContextMenu(item, event.clientY, event.clientX);
+          },
+        },
+      }}
+    />
+  );
 }
 
 export function VaultTree({ entries, selectedPath, onOpenNote, onRenameEntry }: VaultTreeProps) {
   const items = useMemo(() => buildVaultTree(entries), [entries]);
   const [renameState, setRenameState] = useState<RenameState | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
-  const renameContext: VaultTreeRenameContextValue = {
+  const treeContext: VaultTreeContextValue = {
     renameState,
     startRename: (item) => setRenameState({ item, title: item.label }),
     updateTitle: (title) =>
@@ -131,6 +164,7 @@ export function VaultTree({ entries, selectedPath, onOpenNote, onRenameEntry }: 
       }
     },
     cancelRename: () => setRenameState(null),
+    openContextMenu: (item, top, left) => setContextMenu({ item, top, left }),
   };
 
   if (!items.length) {
@@ -138,7 +172,7 @@ export function VaultTree({ entries, selectedPath, onOpenNote, onRenameEntry }: 
   }
 
   return (
-    <VaultTreeRenameContext.Provider value={renameContext}>
+    <VaultTreeContext.Provider value={treeContext}>
       <RichTreeView
         className="vault-tree"
         defaultExpandedItems={items.filter((item) => item.isDirectory).map((item) => item.id)}
@@ -152,6 +186,13 @@ export function VaultTree({ entries, selectedPath, onOpenNote, onRenameEntry }: 
         selectedItems={selectedPath ?? null}
         slots={{ collapseIcon: null, endIcon: null, expandIcon: null, item: VaultTreeItem }}
       />
-    </VaultTreeRenameContext.Provider>
+      <TreeViewItemMenuClicked
+        item={contextMenu?.item ?? null}
+        position={contextMenu ? { top: contextMenu.top, left: contextMenu.left } : undefined}
+        onClose={() => setContextMenu(null)}
+        onOpenNote={onOpenNote}
+        onRename={treeContext.startRename}
+      />
+    </VaultTreeContext.Provider>
   );
 }

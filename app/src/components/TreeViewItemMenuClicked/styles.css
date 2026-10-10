@@ -1,0 +1,19 @@
+@import "../../styles/global/variables.css";
+
+.vault-tree-context-menu.MuiPaper-root {
+  min-width: 140px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.vault-tree-context-menu .MuiMenuItem-root {
+  min-height: 32px;
+  font-size: 14px;
+}
+
+.vault-tree-context-menu .MuiMenuItem-root:hover,
+.vault-tree-context-menu .MuiMenuItem-root.Mui-focusVisible {
+  background: var(--muted);
+}
