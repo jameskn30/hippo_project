@@ -1,8 +1,9 @@
 import type { AtomicCodeMirrorEditorHandle } from "@atomic-editor/editor";
-import { AtomicCodeMirrorEditor } from "@atomic-editor/editor";
 import { BookOpen, FileText, Pencil, Trash2 } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { IconButton } from "@/components/IconButton";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { displayName } from "../shared/note-utils";
@@ -18,6 +19,7 @@ type NoteViewProps = {
   onContentChange: (content: string) => void;
   onRename: (title: string) => Promise<void>;
   onDelete: () => void;
+  onSave: () => void;
 };
 
 export function NoteView({
@@ -29,11 +31,30 @@ export function NoteView({
   onContentChange,
   onRename,
   onDelete,
+  onSave,
 }: NoteViewProps) {
   const editorHandleRef = useRef<AtomicCodeMirrorEditorHandle | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [isRenamingTitle, setIsRenamingTitle] = useState(false);
   const [title, setTitle] = useState(() => displayName(note.path));
+  const [vimEnabled, setVimEnabled] = useState(() => {
+    try {
+      return localStorage.getItem("hippo.editor.vim") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleVim = () => {
+    const enabled = !vimEnabled;
+    setVimEnabled(enabled);
+    try {
+      localStorage.setItem("hippo.editor.vim", String(enabled));
+    } catch {
+      // Vim still works for this session when preference storage is unavailable.
+    }
+    window.requestAnimationFrame(() => editorHandleRef.current?.focus());
+  };
   const saveStatus =
     saveState === "saved"
       ? "All changes saved"
@@ -78,6 +99,17 @@ export function NoteView({
           <span className="path-label">{note.path}</span>
         </div>
         <div className="note-actions">
+          <Button
+            size="sm"
+            variant={vimEnabled ? "secondary" : "ghost"}
+            aria-label="Vim keybindings"
+            aria-pressed={vimEnabled}
+            disabled={reading}
+            title={reading ? "Vim keybindings resume in Edit mode" : "Toggle Vim keybindings"}
+            onClick={toggleVim}
+          >
+            Vim {vimEnabled ? "on" : "off"}
+          </Button>
           <Tabs
             value={reading ? "read" : "edit"}
             onValueChange={(value) => onReadingChange(value === "read")}
@@ -151,18 +183,22 @@ export function NoteView({
             aria-label={`Edit ${displayName(note.path)} as Markdown`}
             onClick={() => !reading && editorHandleRef.current?.focus()}
           >
-            <AtomicCodeMirrorEditor
+            <MarkdownEditor
+              key={note.path}
               documentId={note.path}
               markdownSource={note.content}
               readOnly={reading}
               editorHandleRef={editorHandleRef}
               onMarkdownChange={onContentChange}
+              vimEnabled={vimEnabled}
+              onSave={onSave}
             />
           </div>
         </article>
       </section>
       <footer className="statusbar">
         <span>{reading ? "Reading view" : "Markdown"}</span>
+        {vimEnabled && !reading && <span>Vim: i to type · Esc for commands</span>}
         <span>{note.content.split("\n").length} lines</span>
         <span>Text {fontSize}px</span>
         <span className="status-spacer" />

@@ -10,6 +10,8 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(() => ({
   plugins: [react(), tailwindcss()],
   resolve: {
+    // CodeMirror extensions must share state/view instances with the editor.
+    dedupe: ["@codemirror/state", "@codemirror/view"],
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },

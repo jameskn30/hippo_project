@@ -252,6 +252,12 @@ function App() {
                 : Promise.resolve()
             }
             onDelete={() => void deleteCurrentNote()}
+            onSave={() => {
+              persistNote(note).catch((error) => {
+                setSaveState("error");
+                showError(error);
+              });
+            }}
           />
         ) : (
           <WelcomeState

@@ -174,6 +174,13 @@
 .editor-surface .cm-line {
   color: var(--foreground);
 }
+.editor-surface .cm-vim-panel {
+  padding: 6px 8px;
+  color: var(--foreground);
+  background: var(--muted);
+  font-family: var(--atomic-editor-font-mono);
+  font-size: 12px;
+}
 .statusbar {
   display: flex;
   height: 32px;
