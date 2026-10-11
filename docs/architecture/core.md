@@ -1,0 +1,105 @@
+# Core infrastructure and commands
+
+**Status:** Python package and CLI implemented; component folders contain planning READMEs.  
+**Updated:** 2026-10-11
+
+## Current infrastructure
+
+Hippo core is one local Python project under `core/`, with one importable package under `core/src/hippo/`. This keeps dependencies and installation together while leaving room for component boundaries. Separate folders do not imply separate services, databases, or Python projects.
+
+| Tool or configuration | Current role |
+| --- | --- |
+| Python 3.13 | Development runtime, selected by `core/.python-version` |
+| `uv` | Environment management, dependency resolution, installation, and builds |
+| Typer | CLI definitions, argument handling, help, version, and completion options; version 0.27.3 is currently locked |
+| `uv_build` | Builds the source archive and wheel; configured range is `>=0.8.19,<0.9` |
+| Root `Justfile` | Convenient setup, help, and build commands |
+
+The project metadata allows Python 3.13 and newer; the foundation has been verified locally on Python 3.13. Native executable bundling and other runtime environments remain future work.
+
+## Source layout
+
+```text
+core/
+├── README.md
+├── .python-version
+├── pyproject.toml
+├── uv.lock
+└── src/hippo/
+    ├── __init__.py
+    ├── __main__.py
+    ├── cli.py
+    ├── notes/README.md
+    ├── mcp_server/README.md
+    ├── skill_dreamer/README.md
+    ├── evaluation/README.md
+    ├── graph/README.md
+    ├── memory/README.md
+    └── workflow_engine/README.md
+```
+
+`pyproject.toml` defines the distribution name `hippo-core`, version, dependencies, build backend, and installed command. The import name is `hippo`. `uv.lock` records resolved dependencies and belongs in version control; `.python-version` selects the development interpreter.
+
+Both invocation paths use `hippo.cli.main`:
+
+```text
+hippo                 → installed command → hippo.cli.main → Typer
+python -m hippo       → hippo.__main__      → hippo.cli.main → Typer
+```
+
+The version option reads installed package metadata, keeping `pyproject.toml` as the version source. The CLI currently provides help, version output, and Typer's completion options. It does not start an engine, attach vaults, process notes, or connect to the desktop.
+
+## Commands available now
+
+Run these from the repository root:
+
+| Command | Behavior |
+| --- | --- |
+| `just core-setup` | Runs `uv sync --locked` in `core/`; installs the project and locked dependencies into `core/.venv/` |
+| `just core-help` | Runs `uv run --locked hippo --help` in `core/` |
+| `just core-build` | Runs `uv build` in `core/`; creates a source archive and wheel under `core/dist/` |
+| `just` | Lists available repository commands |
+| `just doctor` | Reports whether the development tools are available |
+| `just setup` | Checks tools and prints dependency installation commands |
+| `just check` | Checks shell syntax and plugin manifest JSON; does not run application tests |
+
+Run direct CLI commands from `core/`:
+
+```sh
+uv run --locked hippo --help
+uv run --locked hippo --version
+uv run --locked python -m hippo --help
+uv run --locked python -m hippo --version
+```
+
+Explicit help and version requests exit with status 0. The current version output is `Hippo core 0.1.0`. Running without arguments shows help and exits with status 2; invalid options or commands report an error and exit with status 2.
+
+Typer exposes `--show-completion` and `--install-completion`. Completion installation changes the user's shell setup and remains an optional user action. Use `uv run` for normal development so the command uses the project environment.
+
+## Local and generated files
+
+| Path | Purpose |
+| --- | --- |
+| `core/.venv/` | Local Python environment; kept for development and ignored by Git |
+| `core/dist/` | Generated build artifacts; recreated by `just core-build` and ignored by Git |
+| `__pycache__/` | Python bytecode caches; generated during imports and ignored by Git |
+
+The cleanup removes existing build artifacts and source bytecode caches. Running or building again can recreate them. A wheel is an installable Python package; standalone macOS bundling is not implemented.
+
+## Planned components
+
+Each component folder contains a README describing its future role. These placeholders do not add Python implementations, dependencies, commands, or running services.
+
+| Component | Proposed responsibility |
+| --- | --- |
+| [User Notes Storage](../../core/src/hippo/notes/README.md) | Vault registration, change capture, ingestion, processing, SQLite notes and indexes |
+| [MCP server](../../core/src/hippo/mcp_server/README.md) | Protocol adapter over core operations; lifecycle managed by the engine |
+| [Skill Dreamer](../../core/src/hippo/skill_dreamer/README.md) | Propose skill improvements and coordinate evaluation |
+| [Evaluation](../../core/src/hippo/evaluation/README.md) | Scenarios, scoring, run results, and reports |
+| [Knowledge graph](../../core/src/hippo/graph/README.md) | Shared graph operations and queries |
+| [Agent memory](../../core/src/hippo/memory/README.md) | Memory organization, retrieval, and lifecycle |
+| [Workflow engine](../../core/src/hippo/workflow_engine/README.md) | Execute definitions from the root `workflows/` directory |
+
+The proposed runtime will coordinate these capabilities. Runtime code and engine-managed child processes will be added when their behavior is approved. There is currently no database, watcher, engine API, background daemon, Docker configuration, or MCP server in the core implementation.
+
+The desktop remains in `app/`. Shared behavior belongs in `hippo`, with desktop and MCP clients calling the same operations. See [spec 02](../specs/02-core-application-structure.md) for the implemented scope; broader future design remains in the Obsidian project notes.

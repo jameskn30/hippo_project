@@ -46,3 +46,15 @@ app-fix:
 # Build a distributable desktop app for this platform.
 app-build:
     cd app && bun run tauri build
+
+# Install the Python core and its locked dependencies.
+core-setup:
+    cd core && uv sync --locked
+
+# Show the Hippo core command-line help.
+core-help:
+    cd core && uv run --locked hippo --help
+
+# Build the Python core source archive and wheel into core/dist/.
+core-build:
+    cd core && uv build

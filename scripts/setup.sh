@@ -6,4 +6,4 @@ cd "$root"
 
 ./scripts/doctor.sh
 
-printf '\nScaffold only: app and core dependency manifests will be added with their first implementations.\n'
+printf '\nDevelopment tools checked. Install dependencies with:\n  just app-setup\n  just core-setup\n\nShow core CLI help with: just core-help\n'

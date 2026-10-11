@@ -2,12 +2,12 @@
 
 Hippo is a local-first Markdown notes app that will grow into a knowledge store and graph for AI agents. Different agent hosts will connect through MCP. The human workflow visualizer is planned for after the MVP.
 
-The current implementation is the first numbered feature: a Tauri desktop app for opening and editing a local Markdown vault. See [spec 01](docs/specs/01-tauri-markdown-notes.md). The Obsidian project vault is the planning source for later specs.
+The current implementation includes a Tauri desktop app for opening and editing a local Markdown vault ([spec 01](docs/specs/01-tauri-markdown-notes.md)) and the Python core package and CLI foundation ([spec 02](docs/specs/02-core-application-structure.md)). The Obsidian project vault is the planning source for later specs.
 
 ## Project layout
 
 - `app/` — Tauri 2 desktop client (React, TypeScript, Tailwind CSS, CodeMirror 6).
-- `core/` — planned local sidecar services and shared knowledge behavior.
+- `core/` — Python package and CLI foundation for the local engine and shared knowledge behavior.
 - `workflows/` — human-editable Hippo workflow definitions.
 - `skills/` — portable agent instructions.
 - `plugins/claude-code/` and `plugins/codex/` — host-specific metadata and packaging.
@@ -54,7 +54,17 @@ just doctor  # Check development tools
 just check   # Validate shell scripts and plugin manifests
 ```
 
-`core/` does not have a runnable service yet. Its knowledge store and MCP features follow the desktop notes MVP.
+The Python core now has a Typer CLI foundation. Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+
+```sh
+just core-setup # Install the core package and locked dependencies
+just core-help  # Show CLI help
+just core-build # Build the Python package
+```
+
+See the [core README](core/README.md) and [spec 02](docs/specs/02-core-application-structure.md). The engine runtime, knowledge store, and MCP features are later increments.
+
+The [core infrastructure guide](docs/architecture/core.md) covers the current files, commands, local environment, build output, and planned component folders.
 
 ## Development conventions
 
