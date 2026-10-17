@@ -26,9 +26,9 @@ Establish one installable Python project for Hippo's local core engine. Keep the
 
 ## Acceptance criteria
 
-- `just core-setup` installs the package and dependencies using the lockfile.
+- `just core-setup` installs the package and dependencies, updating the lockfile automatically when project metadata requires it. Compatible locked versions remain preferred.
 - `just core-help` displays CLI help and exits successfully.
-- From `core/`, both `uv run --locked hippo --version` and `uv run --locked python -m hippo --version` print the version declared in project metadata and exit successfully.
+- From `core/`, both `uv run hippo --version` and `uv run python -m hippo --version` print the version declared in project metadata and exit successfully.
 - Both entry points display equivalent help.
 - Invoking the CLI without arguments displays help and exits with status 2. Invalid options and commands display an error and exit with status 2.
 - `just core-build` creates a source distribution and wheel containing the `hippo` package and installed command declaration.

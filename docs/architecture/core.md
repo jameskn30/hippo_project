@@ -1,7 +1,7 @@
 # Core infrastructure and commands
 
 **Status:** Python package and CLI implemented; component folders contain planning READMEs.  
-**Updated:** 2026-10-11
+**Updated:** 2026-10-17
 
 ## Current infrastructure
 
@@ -55,8 +55,8 @@ Run these from the repository root:
 
 | Command | Behavior |
 | --- | --- |
-| `just core-setup` | Runs `uv sync --locked` in `core/`; installs the project and locked dependencies into `core/.venv/` |
-| `just core-help` | Runs `uv run --locked hippo --help` in `core/` |
+| `just core-setup` | Runs `uv sync` in `core/`; updates the lockfile if required and installs the project and dependencies into `core/.venv/` |
+| `just core-help` | Runs `uv run hippo --help` in `core/` |
 | `just core-build` | Runs `uv build` in `core/`; creates a source archive and wheel under `core/dist/` |
 | `just` | Lists available repository commands |
 | `just doctor` | Reports whether the development tools are available |
@@ -66,11 +66,13 @@ Run these from the repository root:
 Run direct CLI commands from `core/`:
 
 ```sh
-uv run --locked hippo --help
-uv run --locked hippo --version
-uv run --locked python -m hippo --help
-uv run --locked python -m hippo --version
+uv run hippo --help
+uv run hippo --version
+uv run python -m hippo --help
+uv run python -m hippo --version
 ```
+
+Local development uses uv's default automatic locking and environment synchronization. These commands update `uv.lock` when project metadata requires a new resolution. They retain compatible locked versions rather than upgrading packages simply because a new release exists. See [uv locking and syncing](https://docs.astral.sh/uv/concepts/projects/sync/).
 
 Explicit help and version requests exit with status 0. The current version output is `Hippo core 0.1.0`. Running without arguments shows help and exits with status 2; invalid options or commands report an error and exit with status 2.
 

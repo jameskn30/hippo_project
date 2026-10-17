@@ -42,15 +42,17 @@ just core-build
 Equivalent commands, run from `core/`:
 
 ```sh
-uv sync --locked
-uv run --locked hippo --help
-uv run --locked hippo --version
-uv run --locked python -m hippo --help
-uv run --locked python -m hippo --version
+uv sync
+uv run hippo --help
+uv run hippo --version
+uv run python -m hippo --help
+uv run python -m hippo --version
 uv build
 ```
 
 `uv` creates `core/.venv/` and installs the project editably, so source changes are available on the next invocation. Use `uv run` to select that environment rather than the macOS system Python. Keep `uv.lock` in version control; the environment and build output are ignored.
+
+Development commands use uv's automatic locking and synchronization. `uv sync` and `uv run` update `uv.lock` when project dependency changes require it, then prepare the environment. Existing locked versions remain preferred; new package releases alone do not trigger upgrades. See [uv locking and syncing](https://docs.astral.sh/uv/concepts/projects/sync/).
 
 Running `hippo` without arguments shows help and exits with status 2, Typer's missing-command behavior. Explicit `--help` and `--version` exit with status 0. Unknown options or commands produce an error and status 2. Typer also exposes completion options; installing completion is an optional user action.
 

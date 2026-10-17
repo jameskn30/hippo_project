@@ -47,13 +47,13 @@ app-fix:
 app-build:
     cd app && bun run tauri build
 
-# Install the Python core and its locked dependencies.
+# Install the Python core and synchronize its dependencies.
 core-setup:
-    cd core && uv sync --locked
+    cd core && uv sync
 
 # Show the Hippo core command-line help.
 core-help:
-    cd core && uv run --locked hippo --help
+    cd core && uv run hippo --help
 
 # Build the Python core source archive and wheel into core/dist/.
 core-build:
