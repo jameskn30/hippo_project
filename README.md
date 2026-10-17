@@ -8,6 +8,7 @@ The current implementation includes a Tauri desktop app for opening and editing 
 
 - `app/` — Tauri 2 desktop client (React, TypeScript, Tailwind CSS, CodeMirror 6).
 - `core/` — Python package and CLI foundation for the local engine and shared knowledge behavior.
+- `data/` — development Markdown vault data at `/Volumes/SSD/projects/hippo/data`, outside `core/src/hippo/`; runtime vault roots are selected separately.
 - `workflows/` — human-editable Hippo workflow definitions.
 - `skills/` — portable agent instructions.
 - `plugins/claude-code/` and `plugins/codex/` — host-specific metadata and packaging.
@@ -69,6 +70,7 @@ The [core infrastructure guide](docs/architecture/core.md) covers the current fi
 ## Development conventions
 
 - Keep desktop UI and shell code in `app/`; shared knowledge behavior belongs in `core/`.
+- Follow the [core component structure convention](docs/architecture/component-structure.md): each component owns its package and CLI commands; the root CLI registers command groups. The agreed `hippo.vault` refactor is documented but not implemented yet.
 - Keep portable skill sources in `skills/` and host-specific packaging in `plugins/`.
 - Keep local command recipes in `Justfile` and reusable command implementations in `scripts/`.
 - Read the relevant numbered specification before changing project behavior.

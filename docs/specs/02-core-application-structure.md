@@ -24,6 +24,27 @@ Establish one installable Python project for Hippo's local core engine. Keep the
 - Mark each component as planned and describe its responsibilities without adding implementations or dependencies.
 - Document the current infrastructure and available commands in [the core infrastructure guide](../architecture/core.md), and update repository documentation links and setup instructions.
 
+## Agreed component convention: implementation pending
+
+Follow [the core component structure convention](../architecture/component-structure.md) for future components. Each implemented capability is a package under `hippo/` and owns a `cli.py` when it exposes commands. The root `hippo/cli.py` owns global options and explicitly registers component groups; it remains the installed entry point.
+
+The agreed vault layout is:
+
+```text
+core/src/hippo/
+├── cli.py
+└── vault/
+    ├── __init__.py
+    ├── README.md
+    └── cli.py
+```
+
+The code refactor will rename the current `notes/` placeholder to `vault/` and move the vault group and handlers from the root CLI into `hippo.vault.cli`. Current command behavior is preserved until storage implementation is approved. This convention is recorded in documentation only; the code move has not been implemented yet.
+
+Vault and note remain distinct records: a vault identifies a registered directory, and a note identifies a Markdown document within it. Both can belong to the `hippo.vault` package. Add `service.py`, `models.py`, `repository.py`, and behavior-specific modules as functionality arrives, rather than creating empty implementations. Future unit tests mirror the package under `core/tests/vault/`.
+
+The package holds engine code, not user Markdown. The development vault root is `/Volumes/SSD/projects/hippo/data`, inside the application checkout but outside `core/src/`. Additional vaults can be registered elsewhere once registration is implemented. The current `notes/` placeholder contains only developer documentation; there are no user notes there to move. SQLite will live in local application data outside both source and Markdown vaults, with its exact default path chosen during storage implementation.
+
 ## Acceptance criteria
 
 - `just core-setup` installs the package and dependencies, updating the lockfile automatically when project metadata requires it. Compatible locked versions remain preferred.

@@ -19,6 +19,10 @@ The project metadata allows Python 3.13 and newer; the foundation has been verif
 
 ## Source layout
 
+This tree shows current files. The agreed component convention uses `hippo.vault` with component-owned commands in `vault/cli.py`. The existing `notes/` placeholder and root-defined vault handlers have not yet been moved; see [component structure](component-structure.md) for the target layout and future component rules.
+
+Component packages contain Python code and developer documentation. The development Markdown vault is `/Volumes/SSD/projects/hippo/data`, inside the checkout but separate from `core/src/`; other roots may be selected elsewhere. The registry will store vault paths when implemented; the engine database belongs in local application data. No user notes are stored in the current `src/hippo/notes/` placeholder.
+
 ```text
 core/
 ├── README.md
@@ -47,7 +51,7 @@ hippo                 → installed command → hippo.cli.main → Typer
 python -m hippo       → hippo.__main__      → hippo.cli.main → Typer
 ```
 
-The version option reads installed package metadata, keeping `pyproject.toml` as the version source. The CLI currently provides help, version output, and Typer's completion options. It does not start an engine, attach vaults, process notes, or connect to the desktop.
+The version option reads installed package metadata, keeping `pyproject.toml` as the version source. The CLI provides help, version output, Typer's completion options, and `vault add`/`vault list` entry points. The vault commands currently report that storage is not implemented; `vault add` validates an existing readable directory first. The CLI does not start an engine, attach vaults, process notes, or connect to the desktop. Command extraction into `hippo.vault.cli` is agreed and pending.
 
 ## Commands available now
 
@@ -94,7 +98,7 @@ Each component folder contains a README describing its future role. These placeh
 
 | Component | Proposed responsibility |
 | --- | --- |
-| [User Notes Storage](../../core/src/hippo/notes/README.md) | Vault registration, change capture, ingestion, processing, SQLite notes and indexes |
+| [User Notes Storage](../../core/src/hippo/notes/README.md), target package `hippo.vault` | Vault registration, change capture, ingestion, processing, SQLite notes and indexes; linked README remains at the current path until the rename |
 | [MCP server](../../core/src/hippo/mcp_server/README.md) | Protocol adapter over core operations; lifecycle managed by the engine |
 | [Skill Dreamer](../../core/src/hippo/skill_dreamer/README.md) | Propose skill improvements and coordinate evaluation |
 | [Evaluation](../../core/src/hippo/evaluation/README.md) | Scenarios, scoring, run results, and reports |

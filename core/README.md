@@ -2,9 +2,13 @@
 
 `core/` is one Python project containing the `hippo` package under `src/`. Python 3.13 is the development version, `uv` manages dependencies, and Typer defines the command-line interface.
 
-The current implementation provides CLI help and version output. Future components have documentation placeholders; the engine runtime and component behavior will be added in separately reviewed steps. See [core infrastructure and commands](../docs/architecture/core.md) and [spec 02](../docs/specs/02-core-application-structure.md).
+The current implementation provides CLI help and version output, plus `vault add` and `vault list` entry points that explicitly report storage is not implemented. Future components have documentation placeholders; the engine runtime and component behavior will be added in separately reviewed steps. See [core infrastructure and commands](../docs/architecture/core.md) and [spec 02](../docs/specs/02-core-application-structure.md).
 
 ## Structure
+
+The tree below shows the current files. The agreed next layout renames `notes/` to `vault/` and places the vault Typer group in `vault/cli.py`; see the [component structure convention](../docs/architecture/component-structure.md). That code refactor is not implemented yet.
+
+These are application source directories. The development Markdown vault is `/Volumes/SSD/projects/hippo/data`, inside the checkout but outside `core/src/`. Other vault roots may live elsewhere. The current `notes/` folder holds a developer README, not user notes; the future `vault/` package will hold code that manages registered vault directories.
 
 ```text
 core/
@@ -59,6 +63,8 @@ Running `hippo` without arguments shows help and exits with status 2, Typer's mi
 `uv build` produces a source archive and wheel under `core/dist/`. A wheel is an installable Python package, not a standalone macOS executable. Native bundling comes later.
 
 ## Component boundaries
+
+Each component will own its package under `hippo` and its own `cli.py` when it exposes commands. The root `hippo/cli.py` owns global options and registers implemented component groups. Follow the [shared convention](../docs/architecture/component-structure.md) for future components, implementation module names, and matching test locations.
 
 The desktop app and future MCP adapter should call the same core operations. Keep shared application rules in `hippo`, rather than duplicating them in UI or host-specific plugins. Component responsibilities are described in their READMEs and in the [infrastructure guide](../docs/architecture/core.md#planned-components). One package can later provide multiple process entry points without requiring a separate Python project for each component.
 
