@@ -70,7 +70,7 @@ The [core infrastructure guide](docs/architecture/core.md) covers the current fi
 ## Development conventions
 
 - Keep desktop UI and shell code in `app/`; shared knowledge behavior belongs in `core/`.
-- Follow the [core component structure convention](docs/architecture/component-structure.md): each component owns its package and CLI commands; the root CLI registers command groups. The agreed `hippo.vault` refactor is documented but not implemented yet.
+- Follow the [core component structure convention](docs/architecture/component-structure.md): each component owns its package and Typer app module; the root CLI registers command groups. Vault commands live in `hippo.vault.vault_app`.
 - Keep portable skill sources in `skills/` and host-specific packaging in `plugins/`.
 - Keep local command recipes in `Justfile` and reusable command implementations in `scripts/`.
 - Read the relevant numbered specification before changing project behavior.

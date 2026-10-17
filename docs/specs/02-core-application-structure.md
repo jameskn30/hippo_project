@@ -1,6 +1,7 @@
 # 02 - Core Application Structure
 
-**Status:** CLI foundation and component documentation placeholders implemented; engine capabilities planned  
+**Status:** CLI foundation and vault module implemented; storage and engine capabilities planned
+
 **Dependencies:** None for the CLI foundation
 
 ## Objective
@@ -24,9 +25,9 @@ Establish one installable Python project for Hippo's local core engine. Keep the
 - Mark each component as planned and describe its responsibilities without adding implementations or dependencies.
 - Document the current infrastructure and available commands in [the core infrastructure guide](../architecture/core.md), and update repository documentation links and setup instructions.
 
-## Agreed component convention: implementation pending
+## Implemented component convention
 
-Follow [the core component structure convention](../architecture/component-structure.md) for future components. Each implemented capability is a package under `hippo/` and owns a `cli.py` when it exposes commands. The root `hippo/cli.py` owns global options and explicitly registers component groups; it remains the installed entry point.
+Follow [the core component structure convention](../architecture/component-structure.md) for future components. Each implemented capability is a package under `hippo/` and owns a `<component>_app.py` module when it exposes Typer commands. The root `hippo/cli.py` owns global options and explicitly registers component groups; it remains the installed entry point.
 
 The agreed vault layout is:
 
@@ -36,14 +37,14 @@ core/src/hippo/
 └── vault/
     ├── __init__.py
     ├── README.md
-    └── cli.py
+    └── vault_app.py
 ```
 
-The code refactor will rename the current `notes/` placeholder to `vault/` and move the vault group and handlers from the root CLI into `hippo.vault.cli`. Current command behavior is preserved until storage implementation is approved. This convention is recorded in documentation only; the code move has not been implemented yet.
+The `notes/` placeholder was renamed to `vault/`, and the vault group and handlers now live in `hippo.vault.vault_app`. The root CLI imports and registers the group. Current command behavior is preserved until storage implementation is approved.
 
 Vault and note remain distinct records: a vault identifies a registered directory, and a note identifies a Markdown document within it. Both can belong to the `hippo.vault` package. Add `service.py`, `models.py`, `repository.py`, and behavior-specific modules as functionality arrives, rather than creating empty implementations. Future unit tests mirror the package under `core/tests/vault/`.
 
-The package holds engine code, not user Markdown. The development vault root is `/Volumes/SSD/projects/hippo/data`, inside the application checkout but outside `core/src/`. Additional vaults can be registered elsewhere once registration is implemented. The current `notes/` placeholder contains only developer documentation; there are no user notes there to move. SQLite will live in local application data outside both source and Markdown vaults, with its exact default path chosen during storage implementation.
+The package holds engine code, not user Markdown. The development vault root is `/Volumes/SSD/projects/hippo/data`, inside the application checkout but outside `core/src/`. Additional vaults can be registered elsewhere once registration is implemented. No development data moved during the package refactor. SQLite will live in local application data outside both source and Markdown vaults, with its exact default path chosen during storage implementation.
 
 ## Acceptance criteria
 

@@ -1,6 +1,7 @@
 # Core component structure convention
 
-**Status:** Agreed convention; vault package rename and CLI extraction are not implemented yet.  
+**Status:** Vault package and component-owned Typer app implemented; backend planned.
+
 **Updated:** 2026-10-17
 
 ## One project, components inside hippo
@@ -15,24 +16,24 @@ A vault is a registered directory containing notes; a note is an individual Mark
 
 ## Source code and user data are different directories
 
-`core/src/hippo/vault/` is the proposed location for Python code that manages vaults and their notes. It is not a vault directory containing user-authored Markdown. The current `core/src/hippo/notes/` folder contains a developer README only; there are no user notes in it to relocate.
+`core/src/hippo/vault/` contains Python code for the vault component. It is not a directory containing user-authored Markdown. The earlier `notes/` placeholder was renamed to `vault/`, and the package currently contains its Typer interface and developer README. Registry, storage, and ingestion behavior remain planned.
 
 | Contents | Location | Purpose |
 | --- | --- | --- |
-| Component source code | `core/src/hippo/vault/` inside the application repository, after the pending refactor | CLI handlers, registry, scanner, loader, repository, and processing behavior |
+| Component source code | `core/src/hippo/vault/` inside the application repository | Typer handlers implemented; registry, scanner, loader, repository, and processing behavior planned |
 | Development Markdown vault data | `/Volumes/SSD/projects/hippo/data`, outside `core/src/hippo/` | Sample Markdown used during local development |
 | Runtime/user Markdown vaults | Directories selected by the user and registered by path | Actual user notes; the development `data/` path is not a fixed runtime default |
 | Engine database | Local application-data directory, outside source and the Markdown vaults; exact default remains to be chosen | Captured source, vault/note records, processing state, and derived indexes |
 
-The development Markdown vault data is in [the repository's `data/` directory](../../data/). It is outside `core/src/hippo/` and separate from Python code. Runtime/user vaults are selected separately. The code-package portion below is the agreed target and is still pending implementation:
+The development Markdown vault data is in [the repository's `data/` directory](../../data/). It is outside `core/src/hippo/` and separate from Python code. Runtime/user vaults are selected separately. The code-package portion below shows the implemented Typer module and examples of later backend modules:
 
 ```text
 hippo/
 ├── data/                            # Development Markdown vault data
 │   └── *.md
 └── core/src/hippo/
-    └── vault/                       # Planned Python component package
-        ├── cli.py
+    └── vault/                       # Python component package
+        ├── vault_app.py             # Implemented Typer app and commands
         ├── scanner.py               # Later implementation
         └── repository.py            # Later implementation
 ```
@@ -52,27 +53,27 @@ core/
 │   └── vault/               # Python component code, not user Markdown
 │       ├── __init__.py      # Defines the component package
 │       ├── README.md        # Purpose, current status, and component boundaries
-│       └── cli.py           # vault_app, add_vault, list_vaults
+│       └── vault_app.py     # vault_app, add_vault, list_vaults
 └── tests/
     ├── README.md
     └── vault/               # Future unit tests matching the component package
 ```
 
-This is the target layout. Currently, `core/src/hippo/notes/README.md` is the storage placeholder and the vault Typer group and handlers are defined in `hippo/cli.py`. The `tests/vault/` folder and vault backend do not exist yet. This documentation change does not move code or create tests.
+The source layout is implemented: `hippo.vault.vault_app` defines the vault Typer group and handlers, and `hippo.cli` imports and registers the group. The `tests/vault/` folder and vault backend do not exist yet.
 
 ## CLI ownership and registration
 
-Each component owns its Typer command group in `<component>/cli.py`. Export a clearly named object such as `vault_app` or `memory_app`. The root `hippo/cli.py` explicitly imports and registers each implemented group.
+Each component owns its Typer command group in `<component>/<component>_app.py`. Export a matching object such as `vault_app` or `memory_app`. The root `hippo/cli.py` explicitly imports and registers each implemented group.
 
-After the vault refactor, root registration will be:
+Current root registration is:
 
 ```python
-from hippo.vault.cli import vault_app
+from hippo.vault.vault_app import vault_app
 
 app.add_typer(vault_app, name="vault")
 ```
 
-The existing application entry point remains `hippo.cli:main`, and `hippo/__main__.py` continues to delegate to it. Both `hippo` and `python -m hippo` use the same command tree. This refactor preserves the current `vault add` and `vault list` behavior, including their explicit storage-not-implemented error until backend functionality is added.
+The application entry point remains `hippo.cli:main`, and `hippo/__main__.py` delegates to it. Both `hippo` and `python -m hippo` use the same command tree. The refactor preserves `vault add` and `vault list` behavior, including their explicit storage-not-implemented error until backend functionality is added.
 
 Component CLI modules define arguments, render output, and translate application errors into useful command failures. Application operations belong in the component's service layer. Importing a CLI module must not open databases, scan vaults, or start background work; construct resources when a command or the engine runtime needs them.
 
@@ -84,7 +85,7 @@ Use the following names where the responsibility is needed. A component does not
 | --- | --- |
 | `__init__.py` | Package marker and deliberate public exports; keep imports free of startup side effects |
 | `README.md` | Component purpose, implemented versus planned behavior, and interfaces |
-| `cli.py` | Component-owned Typer group and command handlers |
+| `<component>_app.py` | Component-owned Typer group and command handlers, for example `vault_app.py` |
 | `service.py` | Shared application operations used by CLI, desktop integration, MCP, or other components |
 | `models.py` | Typed records and operation inputs/results; introduce identities only when needed |
 | `repository.py` | Persistence operations and transaction rules for records the component owns |
@@ -100,7 +101,7 @@ Keep direct persistence operations in repositories. Services coordinate componen
 
 Use short descriptive `snake_case` package names under `hippo`, such as `vault`, `mcp_server`, `skill_dreamer`, `evaluation`, `graph`, `memory`, and `workflow_engine`. Add `__init__.py` when a README placeholder becomes a regular Python package.
 
-When a future component exposes CLI commands, put its group in that component's `cli.py` and register it explicitly in the root CLI. For example, a future `hippo.memory.cli.memory_app` can be registered with the user-facing command name `memory`. Internal package names and command names can differ deliberately: `mcp_server` can expose an `mcp` group when implemented.
+When a future component exposes Typer commands, put its group in `<component>_app.py` inside the component package and register it explicitly in the root CLI. For example, a future `memory/memory_app.py` can export `memory_app` for the user-facing command name `memory`. Internal package names and command names can differ deliberately: `mcp_server` can expose an `mcp` group when implemented.
 
 Keep the existing README-only placeholders until their behavior is approved. Create implementation files as functionality arrives. Split a module or introduce another package only when its size, reuse, or distribution requirements justify it.
 

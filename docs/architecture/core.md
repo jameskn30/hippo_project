@@ -1,6 +1,7 @@
 # Core infrastructure and commands
 
-**Status:** Python package and CLI implemented; component folders contain planning READMEs.  
+**Status:** Python package and component-owned vault CLI implemented; storage and other components planned.
+
 **Updated:** 2026-10-17
 
 ## Current infrastructure
@@ -19,9 +20,9 @@ The project metadata allows Python 3.13 and newer; the foundation has been verif
 
 ## Source layout
 
-This tree shows current files. The agreed component convention uses `hippo.vault` with component-owned commands in `vault/cli.py`. The existing `notes/` placeholder and root-defined vault handlers have not yet been moved; see [component structure](component-structure.md) for the target layout and future component rules.
+This tree shows current files. The `hippo.vault` package owns its commands in `vault/vault_app.py`, and the root CLI imports and registers `vault_app`. See [component structure](component-structure.md) for the shared convention and future component rules.
 
-Component packages contain Python code and developer documentation. The development Markdown vault is `/Volumes/SSD/projects/hippo/data`, inside the checkout but separate from `core/src/`; other roots may be selected elsewhere. The registry will store vault paths when implemented; the engine database belongs in local application data. No user notes are stored in the current `src/hippo/notes/` placeholder.
+Component packages contain Python code and developer documentation. The development Markdown vault is `/Volumes/SSD/projects/hippo/data`, inside the checkout but separate from `core/src/`; other roots may be selected elsewhere. The registry will store vault paths when implemented; the engine database belongs in local application data. No user notes are stored in `src/hippo/vault/`.
 
 ```text
 core/
@@ -33,7 +34,10 @@ core/
     ├── __init__.py
     ├── __main__.py
     ├── cli.py
-    ├── notes/README.md
+    ├── vault/
+    │   ├── __init__.py
+    │   ├── README.md
+    │   └── vault_app.py
     ├── mcp_server/README.md
     ├── skill_dreamer/README.md
     ├── evaluation/README.md
@@ -51,7 +55,7 @@ hippo                 → installed command → hippo.cli.main → Typer
 python -m hippo       → hippo.__main__      → hippo.cli.main → Typer
 ```
 
-The version option reads installed package metadata, keeping `pyproject.toml` as the version source. The CLI provides help, version output, Typer's completion options, and `vault add`/`vault list` entry points. The vault commands currently report that storage is not implemented; `vault add` validates an existing readable directory first. The CLI does not start an engine, attach vaults, process notes, or connect to the desktop. Command extraction into `hippo.vault.cli` is agreed and pending.
+The version option reads installed package metadata, keeping `pyproject.toml` as the version source. The CLI provides help, version output, Typer's completion options, and `vault add`/`vault list` entry points defined in `hippo.vault.vault_app`. The vault commands currently report that storage is not implemented; `vault add` validates an existing readable directory first. The CLI does not start an engine, attach vaults, process notes, or connect to the desktop.
 
 ## Commands available now
 
@@ -94,11 +98,11 @@ The cleanup removes existing build artifacts and source bytecode caches. Running
 
 ## Planned components
 
-Each component folder contains a README describing its future role. These placeholders do not add Python implementations, dependencies, commands, or running services.
+Each component folder contains a README describing its role. The vault package has a Typer interface; its backend and the other README-only components remain planned.
 
 | Component | Proposed responsibility |
 | --- | --- |
-| [User Notes Storage](../../core/src/hippo/notes/README.md), target package `hippo.vault` | Vault registration, change capture, ingestion, processing, SQLite notes and indexes; linked README remains at the current path until the rename |
+| [Vault](../../core/src/hippo/vault/README.md), package `hippo.vault` | Component CLI implemented; vault registration, change capture, ingestion, processing, SQLite notes and indexes planned |
 | [MCP server](../../core/src/hippo/mcp_server/README.md) | Protocol adapter over core operations; lifecycle managed by the engine |
 | [Skill Dreamer](../../core/src/hippo/skill_dreamer/README.md) | Propose skill improvements and coordinate evaluation |
 | [Evaluation](../../core/src/hippo/evaluation/README.md) | Scenarios, scoring, run results, and reports |

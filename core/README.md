@@ -6,9 +6,9 @@ The current implementation provides CLI help and version output, plus `vault add
 
 ## Structure
 
-The tree below shows the current files. The agreed next layout renames `notes/` to `vault/` and places the vault Typer group in `vault/cli.py`; see the [component structure convention](../docs/architecture/component-structure.md). That code refactor is not implemented yet.
+The tree below shows the current files. Vault commands live in `vault/vault_app.py` and are registered by the root CLI; see the [component structure convention](../docs/architecture/component-structure.md).
 
-These are application source directories. The development Markdown vault is `/Volumes/SSD/projects/hippo/data`, inside the checkout but outside `core/src/`. Other vault roots may live elsewhere. The current `notes/` folder holds a developer README, not user notes; the future `vault/` package will hold code that manages registered vault directories.
+These are application source directories. The development Markdown vault is `/Volumes/SSD/projects/hippo/data`, inside the checkout but outside `core/src/`. Other vault roots may live elsewhere. The `vault/` package contains code and developer documentation, not user notes.
 
 ```text
 core/
@@ -20,7 +20,10 @@ core/
     ├── __init__.py      # Defines the importable hippo package
     ├── __main__.py      # Delegates python -m hippo to the CLI
     ├── cli.py           # Typer application and shared main() entry point
-    ├── notes/README.md
+    ├── vault/
+    │   ├── __init__.py
+    │   ├── README.md
+    │   └── vault_app.py  # Component-owned Typer group and command handlers
     ├── mcp_server/README.md
     ├── skill_dreamer/README.md
     ├── evaluation/README.md
@@ -31,7 +34,7 @@ core/
 
 The installable distribution is named `hippo-core`; Python imports use `hippo`, and the installed shell command is `hippo`. These names refer to the same project. The version lives in `pyproject.toml` and is read from installed package metadata.
 
-The component folders contain planning READMEs only. Add Python implementations as functionality is approved. Each component shares the same project configuration and dependency lockfile.
+The vault package implements its CLI interface; registry, storage, and ingestion remain planned. Other component folders contain planning READMEs only. Add Python implementations as functionality is approved. Each component shares the same project configuration and dependency lockfile.
 
 ## Development
 
@@ -64,7 +67,7 @@ Running `hippo` without arguments shows help and exits with status 2, Typer's mi
 
 ## Component boundaries
 
-Each component will own its package under `hippo` and its own `cli.py` when it exposes commands. The root `hippo/cli.py` owns global options and registers implemented component groups. Follow the [shared convention](../docs/architecture/component-structure.md) for future components, implementation module names, and matching test locations.
+Each component owns its package under `hippo` and a `<component>_app.py` module when it exposes Typer commands, such as `vault/vault_app.py`. The root `hippo/cli.py` owns global options and registers implemented component groups. Follow the [shared convention](../docs/architecture/component-structure.md) for future components, implementation module names, and matching test locations.
 
 The desktop app and future MCP adapter should call the same core operations. Keep shared application rules in `hippo`, rather than duplicating them in UI or host-specific plugins. Component responsibilities are described in their READMEs and in the [infrastructure guide](../docs/architecture/core.md#planned-components). One package can later provide multiple process entry points without requiring a separate Python project for each component.
 
