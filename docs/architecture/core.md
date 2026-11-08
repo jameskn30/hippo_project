@@ -14,7 +14,7 @@ Hippo core is one local Python project under `core/`, with one importable packag
 | `uv` | Environment management, dependency resolution, installation, and builds |
 | Typer | CLI definitions, argument handling, help, version, and completion options; version 0.27.3 is currently locked |
 | `uv_build` | Builds the source archive and wheel; configured range is `>=0.8.19,<0.9` |
-| dbmate | SQL migration tool, independent of Python; pinned npm package prepared by `node scripts/migrations/migrate.mjs install` |
+| dbmate | SQL migration tool, independent of Python; pinned npm package prepared by `node database/scripts/migrate.mjs install` |
 | Root `Justfile` | Convenient setup, help, build, and migration commands |
 
 The project metadata allows Python 3.13 and newer; the foundation has been verified locally on Python 3.13. Native executable bundling and other runtime environments remain future work.
@@ -35,9 +35,6 @@ core/
     ├── __init__.py
     ├── __main__.py
     ├── cli.py
-    ├── migrations/
-    │   ├── README.md
-    │   └── 20261017000100_create_vault.sql
     ├── vault/
     │   ├── __init__.py
     │   ├── README.md
@@ -51,6 +48,8 @@ core/
     ├── memory/README.md
     └── workflow_engine/README.md
 ```
+
+Database tooling lives separately in [database/](../../database/README.md): `migrations/` contains versioned SQL, `queries/` contains read-only SQL, and `scripts/` contains the migration runner and future executable database utilities. These repository assets are not included in the Python wheel.
 
 `pyproject.toml` defines the distribution name `hippo-core`, version, dependencies, build backend, and installed command. The import name is `hippo`. `uv.lock` records resolved dependencies and belongs in version control; `.python-version` selects the development interpreter.
 
@@ -72,10 +71,10 @@ Run these from the repository root:
 | `just core-setup` | Runs `uv sync` in `core/`; updates the lockfile if required and installs the project and dependencies into `core/.venv/` |
 | `just core-help` | Runs `uv run hippo --help` in `core/` |
 | `just core-build` | Runs `uv build` in `core/`; creates a source archive and wheel under `core/dist/` |
-| `just data-migrate install` | Prepares the pinned dbmate npm package through `scripts/migrations/migrate.mjs` |
+| `just data-migrate install` | Prepares the pinned dbmate npm package through `database/scripts/migrate.mjs` |
 | `just data-migrate run` | Applies pending SQL migrations using `.env.migrations`; accepts `--env-file PATH` |
 | `just data-migrate report` | Reports applied/pending migration files and totals using the same configuration |
-| `node scripts/migrations/migrate.mjs check` | Validates the configured database URL and `MIGRATION_SRC_PATH` without opening SQLite; requires Node.js 20.12+ |
+| `node database/scripts/migrate.mjs check` | Validates the configured database URL and `MIGRATION_SRC_PATH` without opening SQLite; requires Node.js 20.12+ |
 | `just` | Lists available repository commands |
 | `just doctor` | Reports whether the development tools are available |
 | `just setup` | Checks tools and prints dependency installation commands |
@@ -121,6 +120,6 @@ Each component folder contains a README describing its role. The vault package h
 | [Agent memory](../../core/src/hippo/memory/README.md) | Memory organization, retrieval, and lifecycle |
 | [Workflow engine](../../core/src/hippo/workflow_engine/README.md) | Execute definitions from the root `workflows/` directory |
 
-The proposed runtime will coordinate these capabilities. Runtime code and engine-managed child processes will be added when their behavior is approved. The SQLite vault repository and [dbmate migration assets](../../core/src/hippo/migrations/README.md) exist, but are not connected to the CLI. There is currently no watcher, engine API, background daemon, Docker configuration, or MCP server in the core implementation.
+The proposed runtime will coordinate these capabilities. Runtime code and engine-managed child processes will be added when their behavior is approved. The SQLite vault repository and [dbmate migration assets](../../database/migrations/README.md) exist, but are not connected to the CLI. There is currently no watcher, engine API, background daemon, Docker configuration, or MCP server in the core implementation.
 
 The desktop remains in `app/`. Shared behavior belongs in `hippo`, with desktop and MCP clients calling the same operations. See [spec 02](../specs/02-core-application-structure.md) for the implemented scope; broader future design remains in the Obsidian project notes.

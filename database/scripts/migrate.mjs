@@ -9,7 +9,7 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const dbmatePackage = "dbmate@2.36.0";
 const databaseKey = "HIPPO_MIGRATION_DATABASE_URL";
 
-const usage = `Usage: node scripts/migrations/migrate.mjs <install|check|run|report> [--env-file PATH]
+const usage = `Usage: node database/scripts/migrate.mjs <install|check|run|report> [--env-file PATH]
 
   install  Download/cache the pinned dbmate npm package and print its version.
   check    Validate configuration and filesystem access without opening SQLite.

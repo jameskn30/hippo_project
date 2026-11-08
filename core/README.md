@@ -20,9 +20,6 @@ core/
     ├── __init__.py      # Defines the importable hippo package
     ├── __main__.py      # Delegates python -m hippo to the CLI
     ├── cli.py           # Typer application and shared main() entry point
-    ├── migrations/
-    │   ├── README.md
-    │   └── 20261017000100_create_vault.sql
     ├── vault/
     │   ├── __init__.py
     │   ├── README.md
@@ -72,21 +69,23 @@ Running `hippo` without arguments shows help and exits with status 2, Typer's mi
 
 ## Database migrations
 
+SQL migrations, reusable queries, and database utilities live in the repository's [database/ directory](../database/README.md), outside the Python package. These assets are not bundled into the core wheel.
+
 Use the standalone JavaScript migration script with Node.js and npm installed:
 
 ```sh
-node scripts/migrations/migrate.mjs install
+node database/scripts/migrate.mjs install
 # Set HIPPO_MIGRATION_DATABASE_URL in the root .env.migrations first.
-node scripts/migrations/migrate.mjs check
-node scripts/migrations/migrate.mjs report
-node scripts/migrations/migrate.mjs run
+node database/scripts/migrate.mjs check
+node database/scripts/migrate.mjs report
+node database/scripts/migrate.mjs run
 # Equivalent wrapper:
 just data-migrate check
 just data-migrate report
 just data-migrate run
 ```
 
-The scripts under `scripts/migrations/` require Node.js 20.12+ and use pinned `dbmate@2.36.0` through npm. `.env.migrations` is local and Git-ignored; `.env.migrations.example` is the tracked template. Set the destination `HIPPO_MIGRATION_DATABASE_URL` and SQL source `MIGRATION_SRC_PATH`; exported values override the file, and `--env-file PATH` selects another file. Preflight checks configuration and filesystem access before dbmate starts. The local database target is `/Users/nguyen/Library/Application Support/Hippo/hippo.sqlite3`. SQL files live under `src/hippo/migrations/`; dbmate runs independently of Python and records versions in `schema_migrations`. `VaultRepository` opens an existing database without creating or upgrading tables. See [migration instructions and manual verification](src/hippo/migrations/README.md) for preflight-only checks and current limits, including backups and adoption of older unversioned databases.
+The scripts under `database/scripts/` require Node.js 20.12+ and use pinned `dbmate@2.36.0` through npm. `.env.migrations` is local and Git-ignored; `.env.migrations.example` is the tracked template. Set the destination `HIPPO_MIGRATION_DATABASE_URL` and SQL source `MIGRATION_SRC_PATH`; exported values override the file, and `--env-file PATH` selects another file. Preflight checks configuration and filesystem access before dbmate starts. The local database target is `/Users/nguyen/Library/Application Support/Hippo/hippo.sqlite3`. SQL files live under `database/migrations/` at the repository root; dbmate runs independently of Python and records versions in `schema_migrations`. `VaultRepository` opens an existing database without creating or upgrading tables. See [migration instructions and manual verification](../database/migrations/README.md) for preflight-only checks and current limits, including backups and adoption of older unversioned databases.
 
 ## Component boundaries
 

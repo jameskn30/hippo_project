@@ -62,4 +62,4 @@ core-build:
 # Install, check, run, or report SQL migrations using the standalone Node script.
 [positional-arguments]
 data-migrate action *args:
-    node scripts/migrations/migrate.mjs "$@"
+    node database/scripts/migrate.mjs "$@"
