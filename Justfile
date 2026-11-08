@@ -58,3 +58,8 @@ core-help:
 # Build the Python core source archive and wheel into core/dist/.
 core-build:
     cd core && uv build
+
+# Install, check, run, or report SQL migrations using the standalone Node script.
+[positional-arguments]
+data-migrate action *args:
+    node scripts/migrations/migrate.mjs "$@"

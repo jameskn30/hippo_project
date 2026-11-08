@@ -1,6 +1,6 @@
 # Core infrastructure and commands
 
-**Status:** Python package and component-owned vault CLI implemented; storage and other components planned.
+**Status:** Python package, vault CLI interface, registration repository, and initial SQL migration implemented; CLI storage wiring and engine runtime planned.
 
 **Updated:** 2026-10-17
 
@@ -14,7 +14,8 @@ Hippo core is one local Python project under `core/`, with one importable packag
 | `uv` | Environment management, dependency resolution, installation, and builds |
 | Typer | CLI definitions, argument handling, help, version, and completion options; version 0.27.3 is currently locked |
 | `uv_build` | Builds the source archive and wheel; configured range is `>=0.8.19,<0.9` |
-| Root `Justfile` | Convenient setup, help, and build commands |
+| dbmate | SQL migration tool, independent of Python; pinned npm package prepared by `node scripts/migrations/migrate.mjs install` |
+| Root `Justfile` | Convenient setup, help, build, and migration commands |
 
 The project metadata allows Python 3.13 and newer; the foundation has been verified locally on Python 3.13. Native executable bundling and other runtime environments remain future work.
 
@@ -34,10 +35,15 @@ core/
     ├── __init__.py
     ├── __main__.py
     ├── cli.py
+    ├── migrations/
+    │   ├── README.md
+    │   └── 20261017000100_create_vault.sql
     ├── vault/
     │   ├── __init__.py
     │   ├── README.md
-    │   └── vault_app.py
+    │   ├── vault_app.py
+    │   ├── models.py
+    │   └── repository.py
     ├── mcp_server/README.md
     ├── skill_dreamer/README.md
     ├── evaluation/README.md
@@ -66,6 +72,10 @@ Run these from the repository root:
 | `just core-setup` | Runs `uv sync` in `core/`; updates the lockfile if required and installs the project and dependencies into `core/.venv/` |
 | `just core-help` | Runs `uv run hippo --help` in `core/` |
 | `just core-build` | Runs `uv build` in `core/`; creates a source archive and wheel under `core/dist/` |
+| `just data-migrate install` | Prepares the pinned dbmate npm package through `scripts/migrations/migrate.mjs` |
+| `just data-migrate run` | Applies pending SQL migrations using `.env.migrations`; accepts `--env-file PATH` |
+| `just data-migrate report` | Reports applied/pending migration files and totals using the same configuration |
+| `node scripts/migrations/migrate.mjs check` | Validates the configured database URL and `MIGRATION_SRC_PATH` without opening SQLite; requires Node.js 20.12+ |
 | `just` | Lists available repository commands |
 | `just doctor` | Reports whether the development tools are available |
 | `just setup` | Checks tools and prints dependency installation commands |
@@ -93,16 +103,17 @@ Typer exposes `--show-completion` and `--install-completion`. Completion install
 | `core/.venv/` | Local Python environment; kept for development and ignored by Git |
 | `core/dist/` | Generated build artifacts; recreated by `just core-build` and ignored by Git |
 | `__pycache__/` | Python bytecode caches; generated during imports and ignored by Git |
+| `.env.migrations` | Local destination database URL and SQL source directory; Git-ignored, with a tracked `.env.migrations.example` template |
 
 The cleanup removes existing build artifacts and source bytecode caches. Running or building again can recreate them. A wheel is an installable Python package; standalone macOS bundling is not implemented.
 
 ## Planned components
 
-Each component folder contains a README describing its role. The vault package has a Typer interface; its backend and the other README-only components remain planned.
+Each component folder contains a README describing its role. The vault package has a Typer interface and a registration repository; its registry rules and ingestion, plus the other README-only components, remain planned.
 
 | Component | Proposed responsibility |
 | --- | --- |
-| [Vault](../../core/src/hippo/vault/README.md), package `hippo.vault` | Component CLI implemented; vault registration, change capture, ingestion, processing, SQLite notes and indexes planned |
+| [Vault](../../core/src/hippo/vault/README.md), package `hippo.vault` | CLI interface, Vault record, and SQLite registration repository implemented; registry rules, CLI storage wiring, change capture, ingestion, notes and indexes planned |
 | [MCP server](../../core/src/hippo/mcp_server/README.md) | Protocol adapter over core operations; lifecycle managed by the engine |
 | [Skill Dreamer](../../core/src/hippo/skill_dreamer/README.md) | Propose skill improvements and coordinate evaluation |
 | [Evaluation](../../core/src/hippo/evaluation/README.md) | Scenarios, scoring, run results, and reports |
@@ -110,6 +121,6 @@ Each component folder contains a README describing its role. The vault package h
 | [Agent memory](../../core/src/hippo/memory/README.md) | Memory organization, retrieval, and lifecycle |
 | [Workflow engine](../../core/src/hippo/workflow_engine/README.md) | Execute definitions from the root `workflows/` directory |
 
-The proposed runtime will coordinate these capabilities. Runtime code and engine-managed child processes will be added when their behavior is approved. There is currently no database, watcher, engine API, background daemon, Docker configuration, or MCP server in the core implementation.
+The proposed runtime will coordinate these capabilities. Runtime code and engine-managed child processes will be added when their behavior is approved. The SQLite vault repository and [dbmate migration assets](../../core/src/hippo/migrations/README.md) exist, but are not connected to the CLI. There is currently no watcher, engine API, background daemon, Docker configuration, or MCP server in the core implementation.
 
 The desktop remains in `app/`. Shared behavior belongs in `hippo`, with desktop and MCP clients calling the same operations. See [spec 02](../specs/02-core-application-structure.md) for the implemented scope; broader future design remains in the Obsidian project notes.

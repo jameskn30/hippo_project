@@ -2,7 +2,7 @@
 
 `core/` is one Python project containing the `hippo` package under `src/`. Python 3.13 is the development version, `uv` manages dependencies, and Typer defines the command-line interface.
 
-The current implementation provides CLI help and version output, plus `vault add` and `vault list` entry points that explicitly report storage is not implemented. Future components have documentation placeholders; the engine runtime and component behavior will be added in separately reviewed steps. See [core infrastructure and commands](../docs/architecture/core.md) and [spec 02](../docs/specs/02-core-application-structure.md).
+The current implementation provides CLI help and version output, plus `vault add` and `vault list` entry points that explicitly report storage is not implemented. A typed Vault record, SQLite repository, and initial dbmate SQL migration now provide the storage foundation; the CLI is not connected to it yet. Future components have documentation placeholders; the engine runtime and component behavior will be added in separately reviewed steps. See [core infrastructure and commands](../docs/architecture/core.md) and [spec 02](../docs/specs/02-core-application-structure.md).
 
 ## Structure
 
@@ -20,10 +20,15 @@ core/
     ├── __init__.py      # Defines the importable hippo package
     ├── __main__.py      # Delegates python -m hippo to the CLI
     ├── cli.py           # Typer application and shared main() entry point
+    ├── migrations/
+    │   ├── README.md
+    │   └── 20261017000100_create_vault.sql
     ├── vault/
     │   ├── __init__.py
     │   ├── README.md
-    │   └── vault_app.py  # Component-owned Typer group and command handlers
+    │   ├── vault_app.py  # Component-owned Typer group and command handlers
+    │   ├── models.py     # Typed dataclass records
+    │   └── repository.py # SQLite registration operations
     ├── mcp_server/README.md
     ├── skill_dreamer/README.md
     ├── evaluation/README.md
@@ -34,7 +39,7 @@ core/
 
 The installable distribution is named `hippo-core`; Python imports use `hippo`, and the installed shell command is `hippo`. These names refer to the same project. The version lives in `pyproject.toml` and is read from installed package metadata.
 
-The vault package implements its CLI interface; registry, storage, and ingestion remain planned. Other component folders contain planning READMEs only. Add Python implementations as functionality is approved. Each component shares the same project configuration and dependency lockfile.
+The vault package implements its CLI interface and storage foundation; registry rules, CLI storage wiring, and ingestion remain planned. Other component folders contain planning READMEs only. Add Python implementations as functionality is approved. Each component shares the same project configuration and dependency lockfile.
 
 ## Development
 
@@ -64,6 +69,24 @@ Development commands use uv's automatic locking and synchronization. `uv sync` a
 Running `hippo` without arguments shows help and exits with status 2, Typer's missing-command behavior. Explicit `--help` and `--version` exit with status 0. Unknown options or commands produce an error and status 2. Typer also exposes completion options; installing completion is an optional user action.
 
 `uv build` produces a source archive and wheel under `core/dist/`. A wheel is an installable Python package, not a standalone macOS executable. Native bundling comes later.
+
+## Database migrations
+
+Use the standalone JavaScript migration script with Node.js and npm installed:
+
+```sh
+node scripts/migrations/migrate.mjs install
+# Set HIPPO_MIGRATION_DATABASE_URL in the root .env.migrations first.
+node scripts/migrations/migrate.mjs check
+node scripts/migrations/migrate.mjs report
+node scripts/migrations/migrate.mjs run
+# Equivalent wrapper:
+just data-migrate check
+just data-migrate report
+just data-migrate run
+```
+
+The scripts under `scripts/migrations/` require Node.js 20.12+ and use pinned `dbmate@2.36.0` through npm. `.env.migrations` is local and Git-ignored; `.env.migrations.example` is the tracked template. Set the destination `HIPPO_MIGRATION_DATABASE_URL` and SQL source `MIGRATION_SRC_PATH`; exported values override the file, and `--env-file PATH` selects another file. Preflight checks configuration and filesystem access before dbmate starts. The local database target is `/Users/nguyen/Library/Application Support/Hippo/hippo.sqlite3`. SQL files live under `src/hippo/migrations/`; dbmate runs independently of Python and records versions in `schema_migrations`. `VaultRepository` opens an existing database without creating or upgrading tables. See [migration instructions and manual verification](src/hippo/migrations/README.md) for preflight-only checks and current limits, including backups and adoption of older unversioned databases.
 
 ## Component boundaries
 
