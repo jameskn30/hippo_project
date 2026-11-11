@@ -17,3 +17,6 @@ __pycache__/
 !.env.migrations.example
 .DS_Store
 *.bkp
+
+# sandbox
+sandbox/

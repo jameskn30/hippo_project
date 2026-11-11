@@ -1,0 +1,9 @@
+{
+  "include": ["core/src"],
+  "extraPaths": ["core/src"],
+  "venvPath": "core",
+  "venv": ".venv",
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "standard",
+  "reportDeprecated": "warning"
+}

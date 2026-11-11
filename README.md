@@ -8,9 +8,10 @@ The current implementation includes a Tauri desktop app for opening and editing 
 
 - `app/` — Tauri 2 desktop client (React, TypeScript, Tailwind CSS, CodeMirror 6).
 - `core/` — Python package and CLI foundation for the local engine and shared knowledge behavior.
+- `database/` — SQL migrations, reusable queries, and executable database utilities. See [database tools](database/README.md).
 - `data/` — development Markdown vault data at `/Volumes/SSD/projects/hippo/data`, outside `core/src/hippo/`; runtime vault roots are selected separately.
 - `workflows/` — human-editable Hippo workflow definitions.
-- `skills/` — portable agent instructions.
+- `skills/` — portable agent instructions, including the [Hippo database skill](skills/hippo-database/SKILL.md), shared with Codex and Claude Code through project discovery links.
 - `plugins/claude-code/` and `plugins/codex/` — host-specific metadata and packaging.
 - `scripts/` — reusable local setup and utility commands.
 - `docs/specs/` — active implementation specs; future planning specs are in Obsidian.
@@ -72,5 +73,5 @@ The [core infrastructure guide](docs/architecture/core.md) covers the current fi
 - Keep desktop UI and shell code in `app/`; shared knowledge behavior belongs in `core/`.
 - Follow the [core component structure convention](docs/architecture/component-structure.md): each component owns its package and Typer app module; the root CLI registers command groups. Vault commands live in `hippo.vault.vault_app`.
 - Keep portable skill sources in `skills/` and host-specific packaging in `plugins/`.
-- Keep local command recipes in `Justfile` and reusable command implementations in `scripts/`.
+- Keep local command recipes in `Justfile`, general reusable command implementations in `scripts/`, and database utilities in `database/scripts/`.
 - Read the relevant numbered specification before changing project behavior.

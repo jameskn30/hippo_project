@@ -1,18 +1,72 @@
 """Vault Typer application and command handlers."""
 
+import sqlite3
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from hippo.config import Config
+from hippo.vault.registry import VaultRegistry
+from hippo.vault.repository import VaultRepository
+
 vault_app = typer.Typer(
-    help="Manage local Markdown vaults (storage not implemented yet).",
+    help="Register and list local Markdown vaults.",
     no_args_is_help=True,
 )
 
 
-@vault_app.command("add")
+@vault_app.callback()
+def configure_vault(
+    ctx: typer.Context,
+    database: Annotated[
+        Path | None,
+        typer.Option(
+            "--database",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            writable=True,
+            resolve_path=True,
+            show_default=False,
+            help="Override the database configured in .env.migrations or the environment.",
+        ),
+    ] = None,
+) -> None:
+    """Keep database selection in the command context without opening it."""
+    ctx.obj = database
+
+
+@contextmanager
+def _open_registry(ctx: typer.Context) -> Generator[VaultRegistry]:
+    """Close command-owned storage and translate expected application errors."""
+    database: Path | None = ctx.obj
+    try:
+        if database is None:
+            database = Config.from_env().database_path
+        with VaultRepository(database) as repository:
+            yield VaultRegistry(repository)
+    except (OSError, ValueError, sqlite3.Error, RuntimeError) as error:
+        message = str(error)
+        if isinstance(error, sqlite3.OperationalError) and message == "no such table: vault":
+            message += ". Apply Hippo migrations to the selected database first."
+        typer.echo(f"Error: {message}", err=True)
+        raise typer.Exit(code=1) from error
+
+
+@vault_app.command(
+    "add",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault add sandbox/vault\n\n"
+        'hippo vault add "$HOME/Documents/My Notes"'
+    ),
+)
 def add_vault(
+    ctx: typer.Context,
     path: Annotated[
         Path,
         typer.Argument(
@@ -25,13 +79,26 @@ def add_vault(
         ),
     ],
 ) -> None:
-    """Register a vault directory (storage pending)."""
-    typer.echo("Vault storage is not implemented yet.", err=True)
-    raise typer.Exit(code=1)
+    """Register a directory, or return its existing registration."""
+    with _open_registry(ctx) as registry:
+        vault = registry.add_vault(path)
+    typer.echo(f"Vault {vault.vault_id}: {vault.display_name}\n  {vault.root_path}")
 
 
-@vault_app.command("list")
-def list_vaults() -> None:
-    """List registered vaults (storage pending)."""
-    typer.echo("Vault storage is not implemented yet.", err=True)
-    raise typer.Exit(code=1)
+@vault_app.command(
+    "list",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault list\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 list"
+    ),
+)
+def list_vaults(ctx: typer.Context) -> None:
+    """List registered vaults in ID order, including unavailable roots."""
+    with _open_registry(ctx) as registry:
+        vaults = registry.list_vaults()
+    if not vaults:
+        typer.echo("No vaults registered.")
+        return
+    for vault in vaults:
+        typer.echo(f"Vault {vault.vault_id}: {vault.display_name}\n  {vault.root_path}")
