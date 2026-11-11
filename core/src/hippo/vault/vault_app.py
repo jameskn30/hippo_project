@@ -57,7 +57,14 @@ def _open_registry(ctx: typer.Context) -> Generator[VaultRegistry]:
         raise typer.Exit(code=1) from error
 
 
-@vault_app.command("add")
+@vault_app.command(
+    "add",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault add sandbox/vault\n\n"
+        'hippo vault add "$HOME/Documents/My Notes"'
+    ),
+)
 def add_vault(
     ctx: typer.Context,
     path: Annotated[
@@ -78,7 +85,14 @@ def add_vault(
     typer.echo(f"Vault {vault.vault_id}: {vault.display_name}\n  {vault.root_path}")
 
 
-@vault_app.command("list")
+@vault_app.command(
+    "list",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault list\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 list"
+    ),
+)
 def list_vaults(ctx: typer.Context) -> None:
     """List registered vaults in ID order, including unavailable roots."""
     with _open_registry(ctx) as registry:
