@@ -8,6 +8,7 @@ from typing import Annotated
 
 import typer
 
+from hippo.config import Config
 from hippo.vault.registry import VaultRegistry
 from hippo.vault.repository import VaultRepository
 
@@ -31,7 +32,7 @@ def configure_vault(
             writable=True,
             resolve_path=True,
             show_default=False,
-            help="Existing migrated SQLite database; required for add and list.",
+            help="Override the database configured in .env.migrations or the environment.",
         ),
     ] = None,
 ) -> None:
@@ -43,11 +44,9 @@ def configure_vault(
 def _open_registry(ctx: typer.Context) -> Generator[VaultRegistry]:
     """Close command-owned storage and translate expected application errors."""
     database: Path | None = ctx.obj
-    if database is None:
-        raise typer.BadParameter(
-            "Supply --database PATH before add or list.", param_hint="--database"
-        )
     try:
+        if database is None:
+            database = Config.from_env().database_path
         with VaultRepository(database) as repository:
             yield VaultRegistry(repository)
     except (OSError, ValueError, sqlite3.Error, RuntimeError) as error:
