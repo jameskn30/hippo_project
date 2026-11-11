@@ -75,7 +75,7 @@ def add_vault(
 ) -> None:
     """Register a directory, or return its existing registration."""
     with _open_registry(ctx) as registry:
-        vault = registry.register(path)
+        vault = registry.add_vault(path)
     typer.echo(f"Vault {vault.vault_id}: {vault.display_name}\n  {vault.root_path}")
 
 

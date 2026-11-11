@@ -14,7 +14,7 @@ class VaultRegistry:
         """Keep the supplied repository; its caller owns connection cleanup."""
         self._repository = repository
 
-    def register(self, path: Path, display_name: str | None = None) -> Vault:
+    def add_vault(self, path: Path, display_name: str | None = None) -> Vault:
         """Return an existing vault or persist an accessible, non-overlapping root.
 
         Resolve path aliases and preserve an existing vault's ID and name.
