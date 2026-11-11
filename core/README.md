@@ -2,7 +2,7 @@
 
 `core/` is one Python project containing the `hippo` package under `src/`. Python 3.13 is the development version, `uv` manages dependencies, and Typer defines the command-line interface.
 
-The current implementation provides CLI help and version output, plus `vault add` and `vault list` entry points that explicitly report storage is not implemented. A typed Vault record, shared register/list logic, SQLite repository, and initial dbmate SQL migration provide the storage foundation; the CLI is not connected to it yet. Future components have documentation placeholders; the engine runtime and component behavior will be added in separately reviewed steps. See [core infrastructure and commands](../docs/architecture/core.md) and [spec 02](../docs/specs/02-core-application-structure.md).
+The current implementation provides CLI help and version output, plus working `vault add` and `vault list` commands over the shared registry and SQLite repository. Each vault command requires an explicit `--database PATH` pointing to an existing, migrated database. Future components have documentation placeholders; the engine runtime and component behavior will be added in separately reviewed steps. See [core infrastructure and commands](../docs/architecture/core.md) and [spec 02](../docs/specs/02-core-application-structure.md).
 
 ## Structure
 
@@ -37,7 +37,7 @@ core/
 
 The installable distribution is named `hippo-core`; Python imports use `hippo`, and the installed shell command is `hippo`. These names refer to the same project. The version lives in `pyproject.toml` and is read from installed package metadata.
 
-The vault package implements its CLI interface, shared registration rules, and storage foundation. CLI storage wiring, ingestion, and the remaining registry capabilities are planned. See the [vault guide](src/hippo/vault/README.md) for interfaces and pending manual checks. Other component folders contain planning READMEs only. Add Python implementations as functionality is approved. Each component shares the same project configuration and dependency lockfile.
+The vault package implements CLI registration/listing, shared registration rules, and storage. Ingestion and the remaining registry capabilities are planned. See the [vault guide](src/hippo/vault/README.md) for interfaces and manual verification. Other component folders contain planning READMEs only. Add Python implementations as functionality is approved. Each component shares the same project configuration and dependency lockfile.
 
 ## Development
 
@@ -67,6 +67,22 @@ Development commands use uv's automatic locking and synchronization. `uv sync` a
 Running `hippo` without arguments shows help and exits with status 2, Typer's missing-command behavior. Explicit `--help` and `--version` exit with status 0. Unknown options or commands produce an error and status 2. Typer also exposes completion options; installing completion is an optional user action.
 
 `uv build` produces a source archive and wheel under `core/dist/`. A wheel is an installable Python package, not a standalone macOS executable. Native bundling comes later.
+
+## Vault commands
+
+After initializing a database with the repository's migration tooling, run from `core/`:
+
+```sh
+uv run --locked hippo vault --database /absolute/path/hippo.sqlite3 add /absolute/path/notes
+uv run --locked hippo vault --database /absolute/path/hippo.sqlite3 list
+```
+
+Place `--database` before `add` or `list`. The CLI opens only the selected existing
+database, calls `VaultRegistry`, and closes its connection after each command.
+It does not choose a default database or run migrations. Help remains available
+without a database, including `uv run --locked hippo vault add --help`.
+See the [vault guide](src/hippo/vault/README.md#cli) for output, errors, and a
+disposable-database walkthrough.
 
 ## Code quality
 

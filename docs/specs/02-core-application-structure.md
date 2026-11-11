@@ -1,6 +1,6 @@
 # 02 - Core Application Structure
 
-**Status:** CLI/storage foundations, shared vault register/list logic, and dbmate migration implemented; CLI storage wiring and engine runtime planned
+**Status:** CLI vault registration/listing, shared registry, SQLite storage, and dbmate migration implemented; engine runtime planned
 
 **Dependencies:** None for the CLI foundation
 
@@ -40,11 +40,11 @@ core/src/hippo/
     └── vault_app.py
 ```
 
-The `notes/` placeholder was renamed to `vault/`, and the vault group and handlers now live in `hippo.vault.vault_app`. The root CLI imports and registers the group. Current command behavior is preserved until storage implementation is approved.
+The `notes/` placeholder was renamed to `vault/`, and the vault group and handlers now live in `hippo.vault.vault_app`. The root CLI imports and registers the group. `vault add` and `vault list` call the shared registry using an explicit `--database PATH` to an existing, migrated SQLite database. The CLI owns and closes each command's repository connection and translates expected errors into readable failures.
 
 Vault and note remain distinct records: a vault identifies a registered directory, and a note identifies a Markdown document within it. Both can belong to the `hippo.vault` package. Add `service.py`, `models.py`, `repository.py`, and behavior-specific modules as functionality arrives, rather than creating empty implementations. Future unit tests mirror the package under `core/tests/vault/`.
 
-The package holds engine code, not user Markdown. The development vault root is `/Volumes/SSD/projects/hippo/data`, inside the application checkout but outside `core/src/`. Additional vaults can be registered elsewhere once registration is implemented. No development data moved during the package refactor. SQLite will live in local application data outside both source and Markdown vaults, with its exact default path chosen during storage implementation.
+The package holds engine code, not user Markdown. The development vault root is `/Volumes/SSD/projects/hippo/data`, inside the application checkout but outside `core/src/`. Additional vaults can be registered elsewhere. No development data moved during the package refactor. SQLite belongs in local application data outside both source and Markdown vaults. The CLI currently requires an explicit path; a runtime default remains undecided.
 
 ## Acceptance criteria
 
@@ -66,7 +66,7 @@ The package holds engine code, not user Markdown. The development vault root is 
 
 ## Later increments
 
-Shared vault registration now lives in `hippo.vault.registry`. It resolves paths, validates accessible directories, reuses existing identities, and rejects overlapping roots. `VaultRepository.transaction()` groups conflict checks and insertion under one SQLite writer transaction. The three-field schema is unchanged. Runtime behavior still needs the [manual verification checks](../../core/src/hippo/vault/README.md#manual-verification); this does not complete the full registry or connect the CLI.
+Shared vault registration lives in `hippo.vault.registry`. It resolves paths, validates accessible directories, reuses existing identities, and rejects overlapping roots. `VaultRepository.transaction()` groups conflict checks and insertion under one SQLite writer transaction. The three-field schema is unchanged. The [manual registry checks](../../core/src/hippo/vault/README.md#manual-verification) passed locally, and the CLI calls this shared logic. Remaining registry capabilities and ingestion are separate increments.
 
 Add working components as their requirements are approved, rather than empty implementations for every planned capability. The proposed sequence is vault registration and SQLite storage, manual ingestion, processing and directory watching, engine lifecycle and client integration, then managed MCP and optional workers.
 

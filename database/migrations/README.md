@@ -42,7 +42,7 @@ Supported database targets use `sqlite:` or `sqlite3:` without hosts, queries, f
 
 The parent database directory must exist. `run` creates the database when missing and applies pending migrations in order with `up --strict`. `report` uses `status` to show applied and pending files and their totals; pending work alone is not a command failure. Reporting applies no migrations, but SQLite can create an empty file when opening a missing database path. Use `check` for validation without database creation. `--no-dump-schema` avoids a generated schema dump. Quote paths containing spaces. Neither Python nor the Hippo engine is needed to run the script.
 
-Dbmate records applied versions in `schema_migrations`; Hippo does not also track migrations with `PRAGMA user_version`. This is database bookkeeping, not a new vault or note identity. `VaultRepository` opens an existing database and never creates or upgrades tables. It must be used after migrations have succeeded. The vault CLI handlers remain unconnected to storage.
+Dbmate records applied versions in `schema_migrations`; Hippo does not also track migrations with `PRAGMA user_version`. This is database bookkeeping, not a new vault or note identity. `VaultRepository` opens an existing database and never creates or upgrades tables. It must be used after migrations have succeeded. The vault CLI uses this repository through the shared registry; select the migrated file explicitly with `hippo vault --database PATH add DIRECTORY` or `hippo vault --database PATH list`.
 
 ## Add a migration
 

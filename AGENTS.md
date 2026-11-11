@@ -13,6 +13,10 @@
 - Identify the relevant files and code paths, and describe how they work together. Define unfamiliar technical terms briefly.
 - After each step, report the changes, the verification performed, and anything that remains unverified. Provide clear manual verification steps.
 
+## Batch documentation updates
+
+- Do not update documentation after every implementation step. Batch documentation updates together when the user requests them.
+
 ## Leave commits and pushes to the user
 
 - Do not create Git commits or push branches, tags, or changes to GitHub or any other remote. The user handles all commits and pushes.

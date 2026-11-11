@@ -1,8 +1,8 @@
 # Core infrastructure and commands
 
-**Status:** Python package, vault CLI interface, shared register/list rules, repository, and initial SQL migration implemented; CLI storage wiring and engine runtime planned.
+**Status:** Python package, CLI vault registration/listing, shared registry, repository, and initial SQL migration implemented; engine runtime planned.
 
-**Updated:** 2026-11-08
+**Updated:** 2026-11-11
 
 ## Current infrastructure
 
@@ -61,7 +61,7 @@ hippo                 → installed command → hippo.cli.main → Typer
 python -m hippo       → hippo.__main__      → hippo.cli.main → Typer
 ```
 
-The version option reads installed package metadata, keeping `pyproject.toml` as the version source. The CLI provides help, version output, Typer's completion options, and `vault add`/`vault list` entry points defined in `hippo.vault.vault_app`. The vault commands currently report that storage is not implemented; `vault add` validates an existing readable directory first. The CLI does not start an engine, attach vaults, process notes, or connect to the desktop.
+The version option reads installed package metadata, keeping `pyproject.toml` as the version source. The CLI provides help, version output, Typer's completion options, and `vault add`/`vault list` commands defined in `hippo.vault.vault_app`. Run `hippo vault --database PATH add DIRECTORY` or `hippo vault --database PATH list` against an existing, migrated database. The group callback records the selected path without opening storage; each handler opens a repository, calls the shared registry, and closes the connection on success or failure. Help works without a database. The CLI does not run migrations, start an engine, process notes, or connect to the desktop. See the [vault CLI guide](../../core/src/hippo/vault/README.md#cli).
 
 ## Commands available now
 
@@ -109,11 +109,11 @@ The cleanup removes existing build artifacts and source bytecode caches. Running
 
 ## Planned components
 
-Each component folder contains a README describing its role. The vault package has a Typer interface, shared register/list rules, and a registration repository. CLI wiring, ingestion, and remaining registry capabilities are planned, as are the other README-only components.
+Each component folder contains a README describing its role. The vault package has working CLI registration/listing, shared register/list rules, and a registration repository. Ingestion and remaining registry capabilities are planned, as are the other README-only components.
 
 | Component | Proposed responsibility |
 | --- | --- |
-| [Vault](../../core/src/hippo/vault/README.md), package `hippo.vault` | CLI interface, Vault record, shared register/list rules, and SQLite repository implemented; CLI wiring, remaining registry capabilities, change capture, ingestion, notes and indexes planned |
+| [Vault](../../core/src/hippo/vault/README.md), package `hippo.vault` | CLI registration/listing, Vault record, shared register/list rules, and SQLite repository implemented; remaining registry capabilities, change capture, ingestion, notes and indexes planned |
 | [MCP server](../../core/src/hippo/mcp_server/README.md) | Protocol adapter over core operations; lifecycle managed by the engine |
 | [Skill Dreamer](../../core/src/hippo/skill_dreamer/README.md) | Propose skill improvements and coordinate evaluation |
 | [Evaluation](../../core/src/hippo/evaluation/README.md) | Scenarios, scoring, run results, and reports |
@@ -121,6 +121,6 @@ Each component folder contains a README describing its role. The vault package h
 | [Agent memory](../../core/src/hippo/memory/README.md) | Memory organization, retrieval, and lifecycle |
 | [Workflow engine](../../core/src/hippo/workflow_engine/README.md) | Execute definitions from the root `workflows/` directory |
 
-The proposed runtime will coordinate these capabilities. Runtime code and engine-managed child processes will be added when their behavior is approved. The SQLite vault repository and [dbmate migration assets](../../database/migrations/README.md) exist, but are not connected to the CLI. There is currently no watcher, engine API, background daemon, Docker configuration, or MCP server in the core implementation.
+The proposed runtime will coordinate these capabilities. Runtime code and engine-managed child processes will be added when their behavior is approved. The CLI uses the SQLite vault repository after the developer applies [dbmate migrations](../../database/migrations/README.md) separately. There is currently no watcher, engine API, background daemon, Docker configuration, or MCP server in the core implementation.
 
 The desktop remains in `app/`. Shared behavior belongs in `hippo`, with desktop and MCP clients calling the same operations. See [spec 02](../specs/02-core-application-structure.md) for the implemented scope; broader future design remains in the Obsidian project notes.
