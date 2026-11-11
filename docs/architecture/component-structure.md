@@ -1,8 +1,8 @@
 # Core component structure convention
 
-**Status:** Vault package and component-owned Typer app implemented; backend planned.
+**Status:** Vault package, Typer interface, shared register/list rules, and repository implemented; CLI wiring and ingestion planned.
 
-**Updated:** 2026-10-17
+**Updated:** 2026-11-08
 
 ## One project, components inside hippo
 
@@ -16,11 +16,11 @@ A vault is a registered directory containing notes; a note is an individual Mark
 
 ## Source code and user data are different directories
 
-`core/src/hippo/vault/` contains Python code for the vault component. It is not a directory containing user-authored Markdown. The earlier `notes/` placeholder was renamed to `vault/`, and the package currently contains its Typer interface and developer README. Registry, storage, and ingestion behavior remain planned.
+`core/src/hippo/vault/` contains Python code for the vault component. It is not a directory containing user-authored Markdown. The earlier `notes/` placeholder was renamed to `vault/`. The package contains its Typer interface, Vault dataclass, repository, shared register/list rules, and developer README. CLI storage wiring, ingestion, and remaining registry capabilities are planned.
 
 | Contents | Location | Purpose |
 | --- | --- | --- |
-| Component source code | `core/src/hippo/vault/` inside the application repository | Typer handlers implemented; registry, scanner, loader, repository, and processing behavior planned |
+| Component source code | `core/src/hippo/vault/` inside the application repository | Typer interface, registry register/list rules, and repository implemented; CLI wiring, scanning, loading, and processing planned |
 | Development Markdown vault data | `/Volumes/SSD/projects/hippo/data`, outside `core/src/hippo/` | Sample Markdown used during local development |
 | Runtime/user Markdown vaults | Directories selected by the user and registered by path | Actual user notes; the development `data/` path is not a fixed runtime default |
 | Engine database | Local application-data directory, outside source and the Markdown vaults; exact default remains to be chosen | Captured source, vault/note records, processing state, and derived indexes |
@@ -34,11 +34,12 @@ hippo/
 └── core/src/hippo/
     └── vault/                       # Python component package
         ├── vault_app.py             # Implemented Typer app and commands
-        ├── scanner.py               # Later implementation
-        └── repository.py            # Later implementation
+        ├── registry.py              # Shared register/list rules
+        ├── repository.py            # SQLite operations and transactions
+        └── scanner.py               # Later implementation
 ```
 
-During development, `/Volumes/SSD/projects/hippo/data` can be registered explicitly once registration is implemented. It is not automatically registered or hardcoded as a runtime/user vault default. The scanner reads registered directories; it does not treat the Python package as a Markdown vault. Other vaults can live elsewhere, including outside the checkout. This documentation step does not register, move, or modify vault files.
+During development, `/Volumes/SSD/projects/hippo/data` can be registered explicitly through `VaultRegistry`; CLI registration is not wired yet. It is not automatically registered or hardcoded as a runtime/user vault default. The scanner reads registered directories; it does not treat the Python package as a Markdown vault. Other vaults can live elsewhere, including outside the checkout. This documentation step does not register, move, or modify vault files.
 
 ## Agreed vault layout
 
@@ -53,13 +54,16 @@ core/
 │   └── vault/               # Python component code, not user Markdown
 │       ├── __init__.py      # Defines the component package
 │       ├── README.md        # Purpose, current status, and component boundaries
-│       └── vault_app.py     # vault_app, add_vault, list_vaults
+│       ├── vault_app.py     # vault_app, add_vault, list_vaults
+│       ├── models.py        # Vault dataclass
+│       ├── registry.py      # Shared register/list rules
+│       └── repository.py    # SQLite operations and transactions
 └── tests/
     ├── README.md
     └── vault/               # Future unit tests matching the component package
 ```
 
-The source layout is implemented: `hippo.vault.vault_app` defines the vault Typer group and handlers, and `hippo.cli` imports and registers the group. The `tests/vault/` folder and vault backend do not exist yet.
+The source layout is implemented: `hippo.vault.vault_app` defines the vault Typer group and handlers, and `hippo.cli` imports and registers the group. The Vault record, repository, and register/list rules also exist. Runtime verification is pending. The `tests/vault/` folder and ingestion backend do not exist yet.
 
 ## CLI ownership and registration
 
@@ -91,7 +95,7 @@ Use the following names where the responsibility is needed. A component does not
 | `repository.py` | Persistence operations and transaction rules for records the component owns |
 | Other modules | Behavior-specific responsibilities, added when implemented |
 
-For vault storage, later behavior-specific modules can include `registry.py`, `scanner.py`, `watcher.py`, `loader.py`, `worker.py`, and `events.py`. The scanner owns path validation, duplicate-signal handling, and inspection scope. `worker.py` can initially combine pending-work coordination and transformation functions.
+Vault registration uses `registry.py` as its shared application layer. Later modules can include `scanner.py`, `watcher.py`, `loader.py`, `worker.py`, and `events.py`. The scanner owns path validation, duplicate-signal handling, and inspection scope. `worker.py` can initially combine pending-work coordination and transformation functions.
 
 The engine runtime will construct components and own shared execution resources. SQLite access follows the engine's database ownership and concurrency rules; a component folder does not automatically get its own database, thread pool, subprocess, or independently deployed service.
 

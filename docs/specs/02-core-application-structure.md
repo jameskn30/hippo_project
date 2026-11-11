@@ -1,6 +1,6 @@
 # 02 - Core Application Structure
 
-**Status:** CLI foundation, vault storage foundation, and dbmate SQL migration implemented; CLI storage wiring and engine runtime planned
+**Status:** CLI/storage foundations, shared vault register/list logic, and dbmate migration implemented; CLI storage wiring and engine runtime planned
 
 **Dependencies:** None for the CLI foundation
 
@@ -65,6 +65,8 @@ The package holds engine code, not user Markdown. The development vault root is 
 - This is a developer workflow for fresh databases. Automatic backups, unversioned-schema adoption, runtime compatibility checks, and engine-managed startup remain later work. See [migration instructions](../../database/migrations/README.md).
 
 ## Later increments
+
+Shared vault registration now lives in `hippo.vault.registry`. It resolves paths, validates accessible directories, reuses existing identities, and rejects overlapping roots. `VaultRepository.transaction()` groups conflict checks and insertion under one SQLite writer transaction. The three-field schema is unchanged. Runtime behavior still needs the [manual verification checks](../../core/src/hippo/vault/README.md#manual-verification); this does not complete the full registry or connect the CLI.
 
 Add working components as their requirements are approved, rather than empty implementations for every planned capability. The proposed sequence is vault registration and SQLite storage, manual ingestion, processing and directory watching, engine lifecycle and client integration, then managed MCP and optional workers.
 

@@ -1,8 +1,8 @@
 # Core infrastructure and commands
 
-**Status:** Python package, vault CLI interface, registration repository, and initial SQL migration implemented; CLI storage wiring and engine runtime planned.
+**Status:** Python package, vault CLI interface, shared register/list rules, repository, and initial SQL migration implemented; CLI storage wiring and engine runtime planned.
 
-**Updated:** 2026-10-17
+**Updated:** 2026-11-08
 
 ## Current infrastructure
 
@@ -23,7 +23,7 @@ The project metadata allows Python 3.13 and newer; the foundation has been verif
 
 This tree shows current files. The `hippo.vault` package owns its commands in `vault/vault_app.py`, and the root CLI imports and registers `vault_app`. See [component structure](component-structure.md) for the shared convention and future component rules.
 
-Component packages contain Python code and developer documentation. The development Markdown vault is `/Volumes/SSD/projects/hippo/data`, inside the checkout but separate from `core/src/`; other roots may be selected elsewhere. The registry will store vault paths when implemented; the engine database belongs in local application data. No user notes are stored in `src/hippo/vault/`.
+Component packages contain Python code and developer documentation. The development Markdown vault is `/Volumes/SSD/projects/hippo/data`, inside the checkout but separate from `core/src/`; other roots may be selected elsewhere. The shared registry stores registered vault paths; the engine database belongs in local application data. No user notes are stored in `src/hippo/vault/`.
 
 ```text
 core/
@@ -40,6 +40,7 @@ core/
     │   ├── README.md
     │   ├── vault_app.py
     │   ├── models.py
+    │   ├── registry.py
     │   └── repository.py
     ├── mcp_server/README.md
     ├── skill_dreamer/README.md
@@ -108,11 +109,11 @@ The cleanup removes existing build artifacts and source bytecode caches. Running
 
 ## Planned components
 
-Each component folder contains a README describing its role. The vault package has a Typer interface and a registration repository; its registry rules and ingestion, plus the other README-only components, remain planned.
+Each component folder contains a README describing its role. The vault package has a Typer interface, shared register/list rules, and a registration repository. CLI wiring, ingestion, and remaining registry capabilities are planned, as are the other README-only components.
 
 | Component | Proposed responsibility |
 | --- | --- |
-| [Vault](../../core/src/hippo/vault/README.md), package `hippo.vault` | CLI interface, Vault record, and SQLite registration repository implemented; registry rules, CLI storage wiring, change capture, ingestion, notes and indexes planned |
+| [Vault](../../core/src/hippo/vault/README.md), package `hippo.vault` | CLI interface, Vault record, shared register/list rules, and SQLite repository implemented; CLI wiring, remaining registry capabilities, change capture, ingestion, notes and indexes planned |
 | [MCP server](../../core/src/hippo/mcp_server/README.md) | Protocol adapter over core operations; lifecycle managed by the engine |
 | [Skill Dreamer](../../core/src/hippo/skill_dreamer/README.md) | Propose skill improvements and coordinate evaluation |
 | [Evaluation](../../core/src/hippo/evaluation/README.md) | Scenarios, scoring, run results, and reports |

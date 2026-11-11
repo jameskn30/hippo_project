@@ -11,6 +11,16 @@ doctor:
 check:
     ./scripts/check-scaffold.sh
 
+# Check Python core lint, formatting, and types without editing source files.
+lint:
+    cd core && uv run --locked ruff check src
+    cd core && uv run --locked ruff format --check src
+    cd core && uv run --locked pyright --project ../pyrightconfig.json --warnings
+
+# Format Python core source files.
+format:
+    cd core && uv run --locked ruff format src
+
 # Report the development tools needed for the current scaffold.
 setup:
     ./scripts/setup.sh

@@ -2,7 +2,7 @@
 
 `core/` is one Python project containing the `hippo` package under `src/`. Python 3.13 is the development version, `uv` manages dependencies, and Typer defines the command-line interface.
 
-The current implementation provides CLI help and version output, plus `vault add` and `vault list` entry points that explicitly report storage is not implemented. A typed Vault record, SQLite repository, and initial dbmate SQL migration now provide the storage foundation; the CLI is not connected to it yet. Future components have documentation placeholders; the engine runtime and component behavior will be added in separately reviewed steps. See [core infrastructure and commands](../docs/architecture/core.md) and [spec 02](../docs/specs/02-core-application-structure.md).
+The current implementation provides CLI help and version output, plus `vault add` and `vault list` entry points that explicitly report storage is not implemented. A typed Vault record, shared register/list logic, SQLite repository, and initial dbmate SQL migration provide the storage foundation; the CLI is not connected to it yet. Future components have documentation placeholders; the engine runtime and component behavior will be added in separately reviewed steps. See [core infrastructure and commands](../docs/architecture/core.md) and [spec 02](../docs/specs/02-core-application-structure.md).
 
 ## Structure
 
@@ -25,6 +25,7 @@ core/
     │   ├── README.md
     │   ├── vault_app.py  # Component-owned Typer group and command handlers
     │   ├── models.py     # Typed dataclass records
+    │   ├── registry.py   # Shared registration rules
     │   └── repository.py # SQLite registration operations
     ├── mcp_server/README.md
     ├── skill_dreamer/README.md
@@ -36,7 +37,7 @@ core/
 
 The installable distribution is named `hippo-core`; Python imports use `hippo`, and the installed shell command is `hippo`. These names refer to the same project. The version lives in `pyproject.toml` and is read from installed package metadata.
 
-The vault package implements its CLI interface and storage foundation; registry rules, CLI storage wiring, and ingestion remain planned. Other component folders contain planning READMEs only. Add Python implementations as functionality is approved. Each component shares the same project configuration and dependency lockfile.
+The vault package implements its CLI interface, shared registration rules, and storage foundation. CLI storage wiring, ingestion, and the remaining registry capabilities are planned. See the [vault guide](src/hippo/vault/README.md) for interfaces and pending manual checks. Other component folders contain planning READMEs only. Add Python implementations as functionality is approved. Each component shares the same project configuration and dependency lockfile.
 
 ## Development
 
@@ -66,6 +67,33 @@ Development commands use uv's automatic locking and synchronization. `uv sync` a
 Running `hippo` without arguments shows help and exits with status 2, Typer's missing-command behavior. Explicit `--help` and `--version` exit with status 0. Unknown options or commands produce an error and status 2. Typer also exposes completion options; installing completion is an optional user action.
 
 `uv build` produces a source archive and wheel under `core/dist/`. A wheel is an installable Python package, not a standalone macOS executable. Native bundling comes later.
+
+## Code quality
+
+From the repository root:
+
+```sh
+just lint    # Check Python core lint, formatting, and types without editing source files
+just format  # Apply Python core formatting
+```
+
+Both commands cover `core/src/` and use development tools from `core/uv.lock`.
+`just lint` runs Ruff linting, Ruff's formatting check, and Pyright in order,
+stopping at the first failure. Pyright warnings also fail the command.
+`just format` applies Ruff formatting; it does not fix lint or type errors.
+The commands require uv; Pyright also requires Node.js. Neither command runs tests.
+
+Ruff checks undefined names, unused imports, import ordering, common bug patterns,
+and Python modernization rules, with Python 3.13 as the target and a formatting
+line width of 100. Pyright uses `../pyrightconfig.json`, standard type checking,
+and deprecation warnings. Fix findings rather than adding suppressions or
+weakening the configuration to make a check pass.
+
+Pylance remains a separate editor check. In VS Code, select `core/.venv/bin/python`
+as the interpreter. The root `pyrightconfig.json` shares supported analysis settings
+with Pylance, but editor and command-line diagnostics may differ. A passing
+`just lint` does not establish that live Pylance diagnostics or runtime behavior
+have been verified.
 
 ## Database migrations
 
