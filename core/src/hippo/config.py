@@ -1,6 +1,7 @@
 """Typed application configuration loaded from dotenv and the environment."""
 
 import os
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
@@ -26,11 +27,10 @@ class Config:
         Loading configuration does not open databases or create files.
         """
         values, base = _load_environment()
-        database_url = _required_setting(values, "HIPPO_MIGRATION_DATABASE_URL")
-        database_path = _parse_database_url(database_url)
-        source = _required_setting(values, "MIGRATION_SRC_PATH")
-        if source.startswith("~"):
-            raise ValueError("MIGRATION_SRC_PATH must use a literal path without ~.")
+        database_path = load_env_variable(
+            values, "HIPPO_MIGRATION_DATABASE_URL", parser=_parse_database_url
+        )
+        source = load_env_variable(values, "MIGRATION_SRC_PATH", parser=_parse_migration_source)
         return cls(
             database_path=(base / database_path).resolve(),
             migration_source_path=(base / source).resolve(),
@@ -49,16 +49,26 @@ def _load_environment() -> tuple[dict[str, str | None], Path]:
     return values, base
 
 
-def _required_setting(values: dict[str, str | None], name: str) -> str:
-    """Require a nonempty, literal, single-line setting."""
-    value = values.get(name)
+def load_env_variable[T](
+    values: Mapping[str, str | None],
+    name: str,
+    *,
+    parser: Callable[[str], T],
+    default: str | None = None,
+) -> T:
+    """Parse a literal setting, using the default only when the key is absent.
+
+    Missing required values and explicitly empty values raise ValueError.
+    Defaults pass through the same checks and parser as configured values.
+    """
+    value = values.get(name, default)
     if value is None or not value.strip():
         raise ValueError(f"Set {name} in .env.migrations or the environment.")
     if value != value.strip() or any(
         ord(character) < 32 or ord(character) == 127 or character == "$" for character in value
     ):
         raise ValueError(f"{name} must be a literal, single-line value.")
-    return value
+    return parser(value)
 
 
 def _parse_database_url(database_url: str) -> Path:
@@ -82,3 +92,10 @@ def _parse_database_url(database_url: str) -> Path:
             "without a host, query, fragment, or memory target."
         )
     return Path(path)
+
+
+def _parse_migration_source(source: str) -> Path:
+    """Parse a literal migration directory without home expansion."""
+    if source.startswith("~"):
+        raise ValueError("MIGRATION_SRC_PATH must use a literal path without ~.")
+    return Path(source)
