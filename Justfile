@@ -25,6 +25,10 @@ format:
 setup:
     ./scripts/setup.sh
 
+# Initialize the sandbox database and copy missing seed Markdown into its vault.
+sandbox-init:
+    ./scripts/sandbox-init.sh
+
 # Install the desktop app dependencies.
 app-setup:
     cd app && bun install --frozen-lockfile
