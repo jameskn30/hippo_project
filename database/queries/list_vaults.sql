@@ -21,3 +21,4 @@ FROM note
 WHERE deleted_at IS NOT NULL
 ORDER BY note_id;
 
+select * from note_index;

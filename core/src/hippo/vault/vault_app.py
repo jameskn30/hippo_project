@@ -9,12 +9,13 @@ from typing import Annotated
 import typer
 
 from hippo.config import Config
+from hippo.vault.indexer import NoteIndexer
 from hippo.vault.registry import VaultRegistry
 from hippo.vault.repository import VaultRepository
 from hippo.vault.scanner import VaultScanner
 
 vault_app = typer.Typer(
-    help="Register, list, and scan local Markdown vaults.",
+    help="Register, list, scan, and index local Markdown vaults.",
     no_args_is_help=True,
 )
 
@@ -55,6 +56,7 @@ def _open_repository(ctx: typer.Context) -> Generator[VaultRepository]:
         if isinstance(error, sqlite3.OperationalError) and message in {
             "no such table: vault",
             "no such table: note",
+            "no such table: note_index",
         }:
             message += ". Apply Hippo migrations to the selected database first."
         typer.echo(f"Error: {message}", err=True)
@@ -133,4 +135,41 @@ def scan_vault(
     )
     if result.vault.scan_status != "ok":
         typer.echo(f"Error: Scan incomplete: {result.vault.last_scan_error}", err=True)
+        raise typer.Exit(code=1)
+
+
+@vault_app.command(
+    "index",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault index 3\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 index 3"
+    ),
+)
+def index_vault(
+    ctx: typer.Context,
+    vault_id: Annotated[
+        int,
+        typer.Argument(min=1, help="Positive vault ID shown by hippo vault list."),
+    ],
+) -> None:
+    """Index captured notes without scanning the vault or reading Markdown files.
+
+    Skip current indexes and retry failed notes. Skipped notes may have changed
+    during this pass or require an unsupported processor version. Return exit
+    code 1 if any notes failed or were skipped; otherwise return 0.
+    """
+    with _open_repository(ctx) as repository:
+        result = NoteIndexer(repository).index(vault_id)
+    typer.echo(f"Vault {result.vault.vault_id}: {result.vault.display_name}")
+    typer.echo(
+        f"Indexed: {result.indexed} | Unchanged: {result.unchanged} | "
+        f"Skipped: {result.skipped} | Failed: {result.failed}"
+    )
+    if result.failed or result.skipped:
+        typer.echo(
+            "Error: Indexing incomplete. Inspect note.last_error for failures; "
+            "skipped notes changed or require another processor version.",
+            err=True,
+        )
         raise typer.Exit(code=1)
