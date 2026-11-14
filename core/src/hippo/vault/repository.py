@@ -35,10 +35,21 @@ class VaultRepository:
     def transaction(self) -> Generator[None]:
         """Group operations under one writer lock; commit or roll back together.
 
-        Accepts no arguments and yields no value. Nested transactions are not
-        supported. A competing writer waits up to SQLite's default five seconds
-        before sqlite3.OperationalError is raised.
+        Accepts no arguments and yields no value. Nested scopes use savepoints;
+        only the outermost scope commits. A competing writer waits up to SQLite's
+        default five seconds before sqlite3.OperationalError is raised.
         """
+        if self._connection.in_transaction:
+            self._connection.execute("SAVEPOINT hippo_transaction")
+            try:
+                yield
+            except BaseException:
+                self._connection.execute("ROLLBACK TO hippo_transaction")
+                raise
+            finally:
+                self._connection.execute("RELEASE hippo_transaction")
+            return
+
         self._connection.execute("BEGIN IMMEDIATE")
         try:
             yield

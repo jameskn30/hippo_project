@@ -40,6 +40,12 @@ setup:
 sandbox-init:
     ./scripts/sandbox-init.sh
 
+# Example: just seed sandbox/vault
+# Validate a Markdown folder recursively, then seed its vault and missing notes.
+[positional-arguments]
+seed path:
+    uv run --project core --locked python scripts/seed.py "$@"
+
 # Example: just app-setup
 # Install the desktop app dependencies.
 app-setup:
