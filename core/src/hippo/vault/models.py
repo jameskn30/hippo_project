@@ -1,6 +1,6 @@
 """Records used by the vault component."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Literal
 
@@ -26,3 +26,8 @@ class Note:
     revision: int
     deleted_at: str | None
     processing_status: Literal["pending", "processing", "ready", "failed"]
+
+    @classmethod
+    def column_names(cls) -> tuple[str, ...]:
+        """Return stored field names in the record's constructor order."""
+        return tuple(field.name for field in fields(cls))
