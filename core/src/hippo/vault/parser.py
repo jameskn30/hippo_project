@@ -14,7 +14,7 @@ from yaml.events import AliasEvent, CollectionEndEvent, CollectionStartEvent, Sc
 from hippo.vault.models import ParsedNote
 from hippo.vault.source import MAX_NOTE_BYTES
 
-PROCESSOR_VERSION = "markdown-v2"
+PROCESSOR_VERSION = "markdown-v3"
 _MAX_FRONTMATTER_BYTES = 64 * 1024
 _MAX_YAML_DEPTH = 50
 _MAX_YAML_EVENTS = 10_000
@@ -71,11 +71,11 @@ def _load_frontmatter(source: str) -> dict[str, JsonValue]:
     return normalized
 
 
-def _frontmatter(content: str) -> tuple[dict[str, JsonValue], str, int]:
+def _frontmatter(content: str) -> tuple[dict[str, JsonValue], str]:
     """Remove only recognized metadata; malformed/unsupported YAML remains body text."""
     lines = content.split("\n")
     if lines[0].rstrip() != "---":
-        return {}, content, 0
+        return {}, content
     size = 0
     for index, line in enumerate(lines[1:], start=1):
         size += len(line.encode("utf-8")) + 1
@@ -86,8 +86,8 @@ def _frontmatter(content: str) -> tuple[dict[str, JsonValue], str, int]:
                 metadata = _load_frontmatter("\n".join(lines[1:index]))
             except (yaml.YAMLError, ValueError, OverflowError):
                 break
-            return metadata, "\n".join(lines[index + 1 :]), index + 1
-    return {}, content, 0
+            return metadata, "\n".join(lines[index + 1 :])
+    return {}, content
 
 
 def _tags(metadata: dict[str, JsonValue]) -> list[str]:
@@ -173,8 +173,9 @@ def parse_note(content: str, relative_path: str) -> ParsedNote:
     Title preference: nonblank YAML title, first nonblank H1, filename stem.
     CommonMark headings, links and images are recognized; other syntax remains
     ordinary text. Valid frontmatter is removed from the searchable body. Invalid,
-    unterminated or unsupported frontmatter remains ordinary Markdown. Heading
-    line ranges refer to the original source, including any frontmatter lines.
+    unterminated or unsupported frontmatter remains ordinary Markdown. Headings
+    store only their level and text; source ranges are used internally to keep
+    searchable text complete.
 
     Input must be valid UTF-8 text within the source reader's 10 MiB limit. Parsing
     normalizes a leading BOM and line endings without changing captured content.
@@ -187,7 +188,7 @@ def parse_note(content: str, relative_path: str) -> ParsedNote:
     if size > MAX_NOTE_BYTES:
         raise ValueError("Source note exceeds 10 MiB")
     normalized = content.removeprefix("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
-    metadata, body, line_offset = _frontmatter(normalized)
+    metadata, body = _frontmatter(normalized)
     tokens = MarkdownIt("commonmark").parse(body)
     headings: list[JsonValue] = []
     links: list[JsonValue] = []
@@ -210,8 +211,6 @@ def parse_note(content: str, relative_path: str) -> ParsedNote:
                     {
                         "level": level,
                         "text": text,
-                        "line_start": heading_range[0] + line_offset + 1,
-                        "line_end": heading_range[1] + line_offset,
                     }
                 )
                 if level == 1 and not first_h1:
