@@ -123,3 +123,11 @@ class IndexResult:
     unchanged: int = 0
     skipped: int = 0
     failed: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class RefreshResult:
+    """A scan followed by indexing, or no indexing when the scan was incomplete."""
+
+    scan: ScanResult
+    index: IndexResult | None

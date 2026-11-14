@@ -13,12 +13,13 @@ from rich.text import Text
 
 from hippo.config import Config
 from hippo.vault.indexer import NoteIndexer
+from hippo.vault.refresher import VaultRefresher
 from hippo.vault.registry import VaultRegistry
 from hippo.vault.repository import VaultRepository
 from hippo.vault.scanner import VaultScanner
 
 vault_app = typer.Typer(
-    help="Register, list, scan, index, and search local Markdown vaults.",
+    help="Register, list, scan, index, refresh, and search local Markdown vaults.",
     no_args_is_help=True,
 )
 
@@ -174,6 +175,57 @@ def index_vault(
         typer.echo(
             "Error: Indexing incomplete. Inspect note.last_error for failures; "
             "skipped notes changed or require another processor version.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+
+@vault_app.command(
+    "refresh",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault refresh 3\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 refresh 3"
+    ),
+)
+def refresh_vault(
+    ctx: typer.Context,
+    vault_id: Annotated[
+        int,
+        typer.Argument(min=1, help="Positive vault ID shown by hippo vault list."),
+    ],
+) -> None:
+    """Scan once, then index captured changes after a successful scan.
+
+    Run manually to refresh search results after file changes. An incomplete scan
+    skips indexing. Return exit code 1 if scanning fails or indexing has failed or
+    skipped notes; otherwise return 0. This command does not run periodically.
+    """
+    with _open_repository(ctx) as repository:
+        result = VaultRefresher(repository).refresh(vault_id)
+    scan = result.scan
+    typer.echo(f"Vault {scan.vault.vault_id}: {scan.vault.display_name}")
+    typer.echo(
+        f"Scan: Created: {scan.created} | Updated: {scan.updated} | "
+        f"Unchanged: {scan.unchanged} | Deleted: {scan.deleted} | Failed: {scan.failed}"
+    )
+    indexed = result.index
+    if indexed is None:
+        typer.echo(
+            f"Error: Refresh stopped; scan incomplete: {scan.vault.last_scan_error}. "
+            "Indexing was not run.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    typer.echo(
+        f"Index: Indexed: {indexed.indexed} | Unchanged: {indexed.unchanged} | "
+        f"Skipped: {indexed.skipped} | Failed: {indexed.failed}"
+    )
+    if indexed.failed or indexed.skipped:
+        typer.echo(
+            "Error: Refresh incomplete; indexing had failed or skipped notes. "
+            "Inspect note.last_error for failures; skipped notes changed or require "
+            "another processor version.",
             err=True,
         )
         raise typer.Exit(code=1)
