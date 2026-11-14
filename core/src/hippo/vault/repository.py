@@ -10,6 +10,7 @@ from typing import Self
 
 from hippo.vault.models import Note, Vault
 
+_VAULT_COLUMNS = ", ".join(Vault.column_names())
 _NOTE_COLUMNS = ", ".join(Note.column_names())
 
 
@@ -65,24 +66,21 @@ class VaultRepository:
         raise sqlite3.IntegrityError. Commit immediately unless transaction()
         owns the operation; application callers should use VaultRegistry.
         """
-        cursor = self._connection.execute(
-            "INSERT INTO vault (root_path, display_name) VALUES (?, ?)",
+        row = self._connection.execute(
+            f"""INSERT INTO vault (root_path, display_name) VALUES (?, ?)
+                RETURNING {_VAULT_COLUMNS}""",
             (str(root_path), display_name),
-        )
-        vault_id = cursor.lastrowid
-        if vault_id is None:
-            raise RuntimeError("SQLite did not return a vault ID")
-        return Vault(vault_id, root_path, display_name)
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("SQLite did not return the created vault")
+        return Vault(row[0], Path(row[1]), *row[2:])
 
     def list_vaults(self) -> list[Vault]:
         """Return registrations in ID order, including this transaction's writes."""
         rows = self._connection.execute(
-            "SELECT vault_id, root_path, display_name FROM vault ORDER BY vault_id"
+            f"SELECT {_VAULT_COLUMNS} FROM vault ORDER BY vault_id"
         ).fetchall()
-        return [
-            Vault(vault_id, Path(root_path), display_name)
-            for vault_id, root_path, display_name in rows
-        ]
+        return [Vault(row[0], Path(row[1]), *row[2:]) for row in rows]
 
     def create_note(self, vault_id: int, relative_path: str, content: str) -> Note:
         """Insert captured UTF-8 text at revision 1 with pending processing state.
