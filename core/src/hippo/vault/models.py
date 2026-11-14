@@ -93,6 +93,16 @@ class NoteCatalogEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class NoteSearchResult:
+    """One current note match with its raw BM25 score; lower scores rank better."""
+
+    note_id: int
+    relative_path: str
+    title: str
+    score: float
+
+
+@dataclass(frozen=True, slots=True)
 class ScanResult:
     """Reconciliation outcome; failure rolls back all note changes."""
 

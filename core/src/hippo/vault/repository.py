@@ -1,5 +1,6 @@
 """SQLite persistence for vault registrations and captured notes."""
 
+import re
 import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -8,18 +9,45 @@ from hashlib import sha256
 from pathlib import Path
 from types import TracebackType
 from typing import Literal, Self
+from unicodedata import normalize
 
-from hippo.vault.models import Note, NoteCatalogEntry, NoteIndex, ParsedNote, Vault
+from hippo.vault.models import (
+    Note,
+    NoteCatalogEntry,
+    NoteIndex,
+    NoteSearchResult,
+    ParsedNote,
+    Vault,
+)
 
 _VAULT_COLUMNS = ", ".join(Vault.column_names())
 _NOTE_COLUMNS = ", ".join(Note.column_names())
 _CATALOG_COLUMNS = ", ".join(NoteCatalogEntry.column_names())
 _INDEX_COLUMNS = ", ".join(NoteIndex.column_names())
+_MAX_SQLITE_INTEGER = 2**63 - 1
 
 
 def _utc_timestamp() -> str:
     """Return the current UTC time in the stored millisecond timestamp format."""
     return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _search_expression(query: str) -> str:
+    """Quote Unicode letter/number terms so user text cannot become FTS syntax."""
+    if len(query) > 1024:
+        raise ValueError("Search query must not exceed 1024 characters")
+    try:
+        query.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise ValueError("Search query must contain valid UTF-8") from error
+    if "\x00" in query:
+        raise ValueError("Search query must not contain NUL characters")
+    terms = re.findall(r"[^\W_]+", normalize("NFC", query))
+    if not terms:
+        raise ValueError("Search query must contain at least one word")
+    if len(terms) > 32:
+        raise ValueError("Search query must not exceed 32 words")
+    return " AND ".join(f'"{term}"' for term in terms)
 
 
 class VaultRepository:
@@ -204,6 +232,53 @@ class VaultRepository:
             (vault_id, after_note_id, limit),
         ).fetchall()
         return [Note(*row) for row in rows]
+
+    def search_notes(
+        self, vault_id: int, query: str, *, limit: int = 20, offset: int = 0
+    ) -> list[NoteSearchResult]:
+        """Return current matches from one registered vault, best matches first.
+
+        All Unicode letter/number terms must match in any order across title or
+        body. Punctuation separates terms; FTS operators are ordinary words.
+        Matching follows the FTS table's case/accent-insensitive tokenizer. This
+        is word search, without substring, prefix, stemming, or synonym matching.
+
+        Queries require 1..1024 characters, 1..32 terms, valid UTF-8, and no NUL.
+        Limits must be 1..100; vault IDs and nonnegative offsets must fit SQLite's
+        signed 64-bit integers. Invalid input and unknown vaults raise ValueError;
+        a valid query with no matches returns [].
+
+        Return raw BM25 scores with title/body weights 5:1; lower ranks better.
+        Break ties by note ID. Scores are not confidence percentages and should
+        only be compared within the same query and corpus. Read match metadata
+        without fetching body excerpts, scanning files, or modifying storage.
+        Results reflect captured/indexed state.
+        """
+        if not 1 <= vault_id <= _MAX_SQLITE_INTEGER:
+            raise ValueError("vault_id must be a positive SQLite integer")
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        if not 0 <= offset <= _MAX_SQLITE_INTEGER:
+            raise ValueError("offset must be a nonnegative SQLite integer")
+        expression = _search_expression(query)
+        if self.get_vault(vault_id) is None:
+            raise ValueError(f"Vault {vault_id} is not registered")
+        # https://www.sqlite.org/fts5.html#the_bm25_function
+        rows = self._connection.execute(
+            """SELECT n.note_id, n.relative_path, i.title,
+                    bm25(note_search, 5.0, 1.0) AS score
+                FROM note_search
+                JOIN note_index AS i ON i.note_id = note_search.rowid
+                JOIN note AS n ON n.note_id = i.note_id
+                WHERE note_search MATCH ? AND n.vault_id = ?
+                    AND n.deleted_at IS NULL AND n.processing_status = 'ready'
+                    AND n.revision = i.indexed_revision
+                    AND n.required_processor_version = i.processor_version
+                ORDER BY score, n.note_id
+                LIMIT ? OFFSET ?""",
+            (expression, vault_id, limit, offset),
+        ).fetchall()
+        return [NoteSearchResult(*row) for row in rows]
 
     def update_note_content(self, note_id: int, content: str, *, expected_revision: int) -> Note:
         """Accept source only while an active note still has the expected revision.

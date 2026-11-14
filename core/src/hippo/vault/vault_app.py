@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from rich.console import Console
+from rich.table import Table
+from rich.text import Text
 
 from hippo.config import Config
 from hippo.vault.indexer import NoteIndexer
@@ -15,7 +18,7 @@ from hippo.vault.repository import VaultRepository
 from hippo.vault.scanner import VaultScanner
 
 vault_app = typer.Typer(
-    help="Register, list, scan, and index local Markdown vaults.",
+    help="Register, list, scan, index, and search local Markdown vaults.",
     no_args_is_help=True,
 )
 
@@ -57,6 +60,7 @@ def _open_repository(ctx: typer.Context) -> Generator[VaultRepository]:
             "no such table: vault",
             "no such table: note",
             "no such table: note_index",
+            "no such table: note_search",
         }:
             message += ". Apply Hippo migrations to the selected database first."
         typer.echo(f"Error: {message}", err=True)
@@ -173,3 +177,55 @@ def index_vault(
             err=True,
         )
         raise typer.Exit(code=1)
+
+
+@vault_app.command(
+    "search",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        'hippo vault search 3 "database migration"\n\n'
+        'hippo vault search 3 "database" --limit 5 --offset 5\n\n'
+        'hippo vault --database sandbox/hippo.sqlite3 search 3 "database"'
+    ),
+)
+def search_vault(
+    ctx: typer.Context,
+    vault_id: Annotated[
+        int,
+        typer.Argument(min=1, help="Positive vault ID shown by hippo vault list."),
+    ],
+    query: Annotated[
+        str,
+        typer.Argument(help="Words to find in titles or body text; quote multiword queries."),
+    ],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", min=1, max=100, help="Maximum number of matches to return."),
+    ] = 20,
+    offset: Annotated[
+        int,
+        typer.Option("--offset", min=0, help="Number of matches to skip."),
+    ] = 0,
+) -> None:
+    """Search current indexed notes in one vault, best matches first.
+
+    All query words must match, in any order. Matching ignores case and accents;
+    punctuation separates words. Use scan and index first to capture file edits.
+    Results show rank, note ID, title, and path.
+    A valid search with no matches returns exit code 0.
+    """
+    with _open_repository(ctx) as repository:
+        results = repository.search_notes(vault_id, query, limit=limit, offset=offset)
+    if not results:
+        typer.echo("No matching notes.")
+        return
+    table = Table()
+    table.add_column("Rank", justify="right", no_wrap=True)
+    table.add_column("Note ID", justify="right", no_wrap=True)
+    table.add_column("Title", overflow="fold")
+    table.add_column("Path", overflow="fold")
+    for rank, result in enumerate(results, start=offset + 1):
+        table.add_row(
+            str(rank), str(result.note_id), Text(result.title), Text(result.relative_path)
+        )
+    Console().print(table)
