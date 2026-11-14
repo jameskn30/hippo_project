@@ -9,11 +9,12 @@ from pathlib import Path
 from types import TracebackType
 from typing import Literal, Self
 
-from hippo.vault.models import Note, NoteCatalogEntry, Vault
+from hippo.vault.models import Note, NoteCatalogEntry, NoteIndex, ParsedNote, Vault
 
 _VAULT_COLUMNS = ", ".join(Vault.column_names())
 _NOTE_COLUMNS = ", ".join(Note.column_names())
 _CATALOG_COLUMNS = ", ".join(NoteCatalogEntry.column_names())
+_INDEX_COLUMNS = ", ".join(NoteIndex.column_names())
 
 
 def _utc_timestamp() -> str:
@@ -260,6 +261,113 @@ class VaultRepository:
                 f"{expected_revision}; reload before marking it deleted"
             )
         return Note(*row)
+
+    def get_note_index(self, note_id: int) -> NoteIndex | None:
+        """Return only a ready index matching an active note's revision and version.
+
+        Missing, deleted, failed, pending, and superseded results return None.
+        An older stored result remains until replaced, but is never exposed as
+        current through this method.
+        """
+        row = self._connection.execute(
+            f"""SELECT {_INDEX_COLUMNS} FROM note_index
+                WHERE note_id = ? AND EXISTS (
+                    SELECT 1 FROM note
+                    WHERE note.note_id = note_index.note_id
+                        AND note.deleted_at IS NULL AND note.processing_status = 'ready'
+                        AND note.revision = note_index.indexed_revision
+                        AND note.required_processor_version = note_index.processor_version
+                )""",
+            (note_id,),
+        ).fetchone()
+        return NoteIndex(*row) if row is not None else None
+
+    def publish_note_index(
+        self,
+        note_id: int,
+        parsed: ParsedNote,
+        *,
+        expected_revision: int,
+        processor_version: str,
+    ) -> bool:
+        """Atomically publish parsed content and mark the matching note ready.
+
+        Return False without writes if the note was deleted, changed revision,
+        or now requires another processor version. Roll back both writes if the
+        index fails validation. The caller parses before entering this short
+        writer transaction. Nested calls participate in the caller's transaction.
+        """
+        if expected_revision < 1 or not processor_version.strip():
+            raise ValueError("A positive revision and nonblank processor version are required")
+        with self.transaction():
+            row = self._connection.execute(
+                """UPDATE note SET processing_status = 'ready', last_error = NULL
+                    WHERE note_id = ? AND revision = ? AND required_processor_version = ?
+                        AND deleted_at IS NULL
+                    RETURNING note_id""",
+                (note_id, expected_revision, processor_version),
+            ).fetchone()
+            if row is None:
+                return False
+            self._connection.execute(
+                f"""INSERT INTO note_index ({_INDEX_COLUMNS})
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (note_id) DO UPDATE SET
+                        title = excluded.title,
+                        frontmatter_json = excluded.frontmatter_json,
+                        tags_json = excluded.tags_json,
+                        headings_json = excluded.headings_json,
+                        links_json = excluded.links_json,
+                        searchable_text = excluded.searchable_text,
+                        indexed_revision = excluded.indexed_revision,
+                        processor_version = excluded.processor_version,
+                        indexed_at = excluded.indexed_at""",
+                (
+                    note_id,
+                    parsed.title,
+                    parsed.frontmatter_json,
+                    parsed.tags_json,
+                    parsed.headings_json,
+                    parsed.links_json,
+                    parsed.searchable_text,
+                    expected_revision,
+                    processor_version,
+                    _utc_timestamp(),
+                ),
+            )
+        return True
+
+    def record_note_index_failure(
+        self,
+        note_id: int,
+        error: str,
+        *,
+        expected_revision: int,
+        processor_version: str,
+    ) -> bool:
+        """Record a parse failure only while its revision/version are still needed.
+
+        A concurrent successful publication takes precedence over this failure.
+        Return False for superseded work, a deleted/missing note, or an already
+        current index. Database failures propagate rather than becoming parse
+        errors. Commit immediately unless transaction() owns the operation.
+        """
+        if expected_revision < 1 or not processor_version.strip() or not error.strip():
+            raise ValueError(
+                "A positive revision, nonblank processor version and error are required"
+            )
+        cursor = self._connection.execute(
+            """UPDATE note SET processing_status = 'failed', last_error = ?
+                WHERE note_id = ? AND revision = ? AND required_processor_version = ?
+                    AND deleted_at IS NULL AND NOT EXISTS (
+                        SELECT 1 FROM note_index
+                        WHERE note_index.note_id = note.note_id
+                            AND note_index.indexed_revision = note.revision
+                            AND note_index.processor_version = note.required_processor_version
+                    )""",
+            (error.strip(), note_id, expected_revision, processor_version),
+        )
+        return cursor.rowcount == 1
 
     def close(self) -> None:
         """Close the connection; later operations on this instance will fail."""

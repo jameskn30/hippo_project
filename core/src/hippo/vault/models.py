@@ -45,6 +45,18 @@ class Note:
 
 
 @dataclass(frozen=True, slots=True)
+class ParsedNote:
+    """Derived Markdown content, before attaching a note revision or storing it."""
+
+    title: str
+    frontmatter_json: str
+    tags_json: str
+    headings_json: str
+    links_json: str
+    searchable_text: str
+
+
+@dataclass(frozen=True, slots=True)
 class NoteIndex:
     """Stored parsing result for one note revision and processor version."""
 
@@ -89,4 +101,15 @@ class ScanResult:
     updated: int = 0
     unchanged: int = 0
     deleted: int = 0
+    failed: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class IndexResult:
+    """Outcome of one indexing pass over a vault's captured active notes."""
+
+    vault: Vault
+    indexed: int = 0
+    unchanged: int = 0
+    skipped: int = 0
     failed: int = 0
