@@ -1,41 +1,102 @@
-"""SQLite persistence for vault registrations."""
+"""SQLite persistence for vault registrations and captured notes."""
 
+import re
 import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
+from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
 from types import TracebackType
-from typing import Self
+from typing import Literal, Self
+from unicodedata import normalize
 
-from hippo.vault.models import Vault
+from hippo.schema import validate_schema
+from hippo.vault.models import (
+    Note,
+    NoteCatalogEntry,
+    NoteIndex,
+    NoteSearchResult,
+    NoteStatus,
+    ParsedNote,
+    Vault,
+)
+
+_VAULT_COLUMNS = ", ".join(Vault.column_names())
+_NOTE_COLUMNS = ", ".join(Note.column_names())
+_CATALOG_COLUMNS = ", ".join(NoteCatalogEntry.column_names())
+_INDEX_COLUMNS = ", ".join(NoteIndex.column_names())
+_STATUS_COLUMNS = """n.note_id, n.vault_id, n.relative_path, n.revision,
+    n.processing_status, n.required_processor_version, n.last_error,
+    i.indexed_revision, i.processor_version"""
+_MAX_SQLITE_INTEGER = 2**63 - 1
+
+
+def _utc_timestamp() -> str:
+    """Return the current UTC time in the stored millisecond timestamp format."""
+    return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _search_expression(query: str) -> str:
+    """Quote Unicode letter/number terms so user text cannot become FTS syntax."""
+    if len(query) > 1024:
+        raise ValueError("Search query must not exceed 1024 characters")
+    try:
+        query.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise ValueError("Search query must contain valid UTF-8") from error
+    if "\x00" in query:
+        raise ValueError("Search query must not contain NUL characters")
+    terms = re.findall(r"[^\W_]+", normalize("NFC", query))
+    if not terms:
+        raise ValueError("Search query must contain at least one word")
+    if len(terms) > 32:
+        raise ValueError("Search query must not exceed 32 words")
+    return " AND ".join(f'"{term}"' for term in terms)
 
 
 class VaultRepository:
-    """Own one SQLite connection and its vault table.
+    """Own one SQLite connection for vault registrations and captured notes.
 
     The caller supplies an existing database initialized by dbmate migrations.
-    Create, use, and close this repository on the same thread. Operations commit
-    individually unless grouped with transaction(). The repository context
-    manager owns only connection lifetime. Root validation and canonicalization
-    belong to the registry layer, rather than this persistence layer.
+    Check its recorded migration versions once when opening. Create, use, and
+    close this repository on the same thread. Operations commit individually
+    unless grouped with transaction(). The repository context manager owns only
+    connection lifetime. Root validation and canonicalization belong to the
+    registry layer, rather than this persistence layer.
     """
 
     def __init__(self, database_path: Path) -> None:
         database_uri = f"{database_path.resolve().as_uri()}?mode=rw"
         self._connection = sqlite3.connect(database_uri, uri=True, autocommit=True)
-        self._connection.execute("PRAGMA foreign_keys = ON")
-        if self._connection.execute("PRAGMA foreign_keys").fetchone() != (1,):
+        try:
+            self._connection.execute("PRAGMA foreign_keys = ON")
+            if self._connection.execute("PRAGMA foreign_keys").fetchone() != (1,):
+                raise RuntimeError("SQLite foreign-key enforcement is unavailable")
+            validate_schema(self._connection)
+        except BaseException:
             self._connection.close()
-            raise RuntimeError("SQLite foreign-key enforcement is unavailable")
+            raise
 
     @contextmanager
     def transaction(self) -> Generator[None]:
         """Group operations under one writer lock; commit or roll back together.
 
-        Accepts no arguments and yields no value. Nested transactions are not
-        supported. A competing writer waits up to SQLite's default five seconds
-        before sqlite3.OperationalError is raised.
+        Accepts no arguments and yields no value. Nested scopes use savepoints;
+        only the outermost scope commits. A competing writer waits up to SQLite's
+        default five seconds before sqlite3.OperationalError is raised.
         """
+        if self._connection.in_transaction:
+            self._connection.execute("SAVEPOINT hippo_transaction")
+            try:
+                yield
+            except BaseException:
+                self._connection.execute("ROLLBACK TO hippo_transaction")
+                raise
+            finally:
+                self._connection.execute("RELEASE hippo_transaction")
+            return
+
         self._connection.execute("BEGIN IMMEDIATE")
         try:
             yield
@@ -51,24 +112,389 @@ class VaultRepository:
         raise sqlite3.IntegrityError. Commit immediately unless transaction()
         owns the operation; application callers should use VaultRegistry.
         """
-        cursor = self._connection.execute(
-            "INSERT INTO vault (root_path, display_name) VALUES (?, ?)",
+        row = self._connection.execute(
+            f"""INSERT INTO vault (root_path, display_name) VALUES (?, ?)
+                RETURNING {_VAULT_COLUMNS}""",
             (str(root_path), display_name),
-        )
-        vault_id = cursor.lastrowid
-        if vault_id is None:
-            raise RuntimeError("SQLite did not return a vault ID")
-        return Vault(vault_id, root_path, display_name)
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("SQLite did not return the created vault")
+        return Vault(row[0], Path(row[1]), *row[2:])
 
     def list_vaults(self) -> list[Vault]:
         """Return registrations in ID order, including this transaction's writes."""
         rows = self._connection.execute(
-            "SELECT vault_id, root_path, display_name FROM vault ORDER BY vault_id"
+            f"SELECT {_VAULT_COLUMNS} FROM vault ORDER BY vault_id"
         ).fetchall()
-        return [
-            Vault(vault_id, Path(root_path), display_name)
-            for vault_id, root_path, display_name in rows
-        ]
+        return [Vault(row[0], Path(row[1]), *row[2:]) for row in rows]
+
+    def get_vault(self, vault_id: int) -> Vault | None:
+        """Return a registration by ID without checking root availability."""
+        row = self._connection.execute(
+            f"SELECT {_VAULT_COLUMNS} FROM vault WHERE vault_id = ?", (vault_id,)
+        ).fetchone()
+        return Vault(row[0], Path(row[1]), *row[2:]) if row is not None else None
+
+    def list_note_catalog(self, vault_id: int) -> list[NoteCatalogEntry]:
+        """Return active note metadata for one vault, without captured bodies.
+
+        Ordered by ID. The scanner holds its writer transaction while obtaining
+        and reconciling this snapshot. Memory is proportional to catalog size.
+        """
+        rows = self._connection.execute(
+            f"""SELECT {_CATALOG_COLUMNS} FROM note
+                WHERE vault_id = ? AND deleted_at IS NULL ORDER BY note_id""",
+            (vault_id,),
+        ).fetchall()
+        return [NoteCatalogEntry(*row) for row in rows]
+
+    def record_scan_result(
+        self,
+        vault_id: int,
+        *,
+        availability: Literal["ok", "not_ok"],
+        scan_status: Literal["ok", "not_ok"],
+        error: str | None = None,
+    ) -> Vault:
+        """Record a completed scan's outcome and return the updated vault.
+
+        Success requires an available root and no error; it records the current
+        UTC time and clears the previous error. Failure requires a nonblank
+        error and preserves the last successful timestamp. The caller determines
+        coverage and coordinates scans before recording an outcome. Invalid
+        combinations or an unknown vault raise ValueError. Commit immediately
+        unless transaction() owns the operation.
+        """
+        if scan_status == "ok":
+            if availability != "ok" or error is not None:
+                raise ValueError("A successful scan requires availability ok and no error")
+            successful_at = _utc_timestamp()
+        else:
+            if error is None or not error.strip():
+                raise ValueError("An unsuccessful scan requires a nonblank error")
+            error = error.strip()
+            successful_at = None
+
+        row = self._connection.execute(
+            f"""UPDATE vault
+                SET availability = ?, scan_status = ?,
+                    last_successful_scan_at = COALESCE(?, last_successful_scan_at),
+                    last_scan_error = ?
+                WHERE vault_id = ?
+                RETURNING {_VAULT_COLUMNS}""",
+            (availability, scan_status, successful_at, error, vault_id),
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"Vault {vault_id} is not registered")
+        return Vault(row[0], Path(row[1]), *row[2:])
+
+    def create_note(self, vault_id: int, relative_path: str, content: str) -> Note:
+        """Insert captured UTF-8 text at revision 1 with pending processing state.
+
+        Hash the exact text without newline normalization. The caller supplies
+        an existing vault ID and a normalized vault-relative path. Invalid paths,
+        missing vaults, and duplicate active paths raise sqlite3.IntegrityError.
+        Commit immediately unless transaction() owns the operation.
+        """
+        content_hash = sha256(content.encode("utf-8")).hexdigest()
+        row = self._connection.execute(
+            f"""INSERT INTO note (vault_id, relative_path, content, content_hash)
+                VALUES (?, ?, ?, ?)
+                RETURNING {_NOTE_COLUMNS}""",
+            (vault_id, relative_path, content, content_hash),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("SQLite did not return the created note")
+        return Note(*row)
+
+    def get_note(self, note_id: int) -> Note | None:
+        """Return an active note by ID, or None for a missing or deleted note."""
+        row = self._connection.execute(
+            f"SELECT {_NOTE_COLUMNS} FROM note WHERE note_id = ? AND deleted_at IS NULL",
+            (note_id,),
+        ).fetchone()
+        return Note(*row) if row is not None else None
+
+    def get_note_by_path(self, vault_id: int, relative_path: str) -> Note | None:
+        """Return the active note at a vault-relative path, or None if absent."""
+        row = self._connection.execute(
+            f"""SELECT {_NOTE_COLUMNS} FROM note
+                WHERE vault_id = ? AND relative_path = ? AND deleted_at IS NULL""",
+            (vault_id, relative_path),
+        ).fetchone()
+        return Note(*row) if row is not None else None
+
+    def list_notes(self, vault_id: int, *, after_note_id: int = 0, limit: int = 100) -> list[Note]:
+        """Return a page of active notes for one vault in ascending ID order.
+
+        Continue with after_note_id set to the last returned ID. Reject negative
+        cursors and page sizes outside 1..1000 with ValueError. An unknown vault
+        or exhausted page returns an empty list.
+        """
+        if after_note_id < 0:
+            raise ValueError("after_note_id must not be negative")
+        if not 1 <= limit <= 1000:
+            raise ValueError("limit must be between 1 and 1000")
+        rows = self._connection.execute(
+            f"""SELECT {_NOTE_COLUMNS} FROM note
+                WHERE vault_id = ? AND note_id > ? AND deleted_at IS NULL
+                ORDER BY note_id LIMIT ?""",
+            (vault_id, after_note_id, limit),
+        ).fetchall()
+        return [Note(*row) for row in rows]
+
+    def get_note_status(self, note_id: int) -> NoteStatus | None:
+        """Read active note/index metadata in one snapshot, without loading text.
+
+        Missing or deleted notes return None. Retain stored index revision and
+        version even when stale, so callers can explain why it is not current.
+        """
+        if not 1 <= note_id <= _MAX_SQLITE_INTEGER:
+            raise ValueError("note_id must be a positive SQLite integer")
+        row = self._connection.execute(
+            f"""SELECT {_STATUS_COLUMNS} FROM note AS n
+                LEFT JOIN note_index AS i ON i.note_id = n.note_id
+                WHERE n.note_id = ? AND n.deleted_at IS NULL""",
+            (note_id,),
+        ).fetchone()
+        return NoteStatus(*row) if row is not None else None
+
+    def list_note_statuses(
+        self, vault_id: int, *, after_note_id: int = 0, limit: int = 20
+    ) -> list[NoteStatus]:
+        """Page through active note metadata in ID order without loading bodies.
+
+        Use the last returned note ID as the next cursor. Limits are 1..100;
+        vault IDs and nonnegative cursors must fit SQLite integers. Invalid input
+        and unknown vaults raise ValueError; an empty/exhausted page returns [].
+        """
+        if not 1 <= vault_id <= _MAX_SQLITE_INTEGER:
+            raise ValueError("vault_id must be a positive SQLite integer")
+        if not 0 <= after_note_id <= _MAX_SQLITE_INTEGER:
+            raise ValueError("after_note_id must be a nonnegative SQLite integer")
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        if self.get_vault(vault_id) is None:
+            raise ValueError(f"Vault {vault_id} is not registered")
+        rows = self._connection.execute(
+            f"""SELECT {_STATUS_COLUMNS} FROM note AS n
+                LEFT JOIN note_index AS i ON i.note_id = n.note_id
+                WHERE n.vault_id = ? AND n.note_id > ? AND n.deleted_at IS NULL
+                ORDER BY n.note_id LIMIT ?""",
+            (vault_id, after_note_id, limit),
+        ).fetchall()
+        return [NoteStatus(*row) for row in rows]
+
+    def search_notes(
+        self, vault_id: int, query: str, *, limit: int = 20, offset: int = 0
+    ) -> list[NoteSearchResult]:
+        """Return current matches from one registered vault, best matches first.
+
+        All Unicode letter/number terms must match in any order across title or
+        body. Punctuation separates terms; FTS operators are ordinary words.
+        Matching follows the FTS table's case/accent-insensitive tokenizer. This
+        is word search, without substring, prefix, stemming, or synonym matching.
+
+        Queries require 1..1024 characters, 1..32 terms, valid UTF-8, and no NUL.
+        Limits must be 1..100; vault IDs and nonnegative offsets must fit SQLite's
+        signed 64-bit integers. Invalid input and unknown vaults raise ValueError;
+        a valid query with no matches returns [].
+
+        Return raw BM25 scores with title/body weights 5:1; lower ranks better.
+        Break ties by note ID. Scores are not confidence percentages and should
+        only be compared within the same query and corpus. Read match metadata
+        without fetching body excerpts, scanning files, or modifying storage.
+        Results reflect captured/indexed state.
+        """
+        if not 1 <= vault_id <= _MAX_SQLITE_INTEGER:
+            raise ValueError("vault_id must be a positive SQLite integer")
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        if not 0 <= offset <= _MAX_SQLITE_INTEGER:
+            raise ValueError("offset must be a nonnegative SQLite integer")
+        expression = _search_expression(query)
+        if self.get_vault(vault_id) is None:
+            raise ValueError(f"Vault {vault_id} is not registered")
+        # https://www.sqlite.org/fts5.html#the_bm25_function
+        rows = self._connection.execute(
+            """SELECT n.note_id, n.relative_path, i.title,
+                    bm25(note_search, 5.0, 1.0) AS score
+                FROM note_search
+                JOIN note_index AS i ON i.note_id = note_search.rowid
+                JOIN note AS n ON n.note_id = i.note_id
+                WHERE note_search MATCH ? AND n.vault_id = ?
+                    AND n.deleted_at IS NULL AND n.processing_status = 'ready'
+                    AND n.revision = i.indexed_revision
+                    AND n.required_processor_version = i.processor_version
+                ORDER BY score, n.note_id
+                LIMIT ? OFFSET ?""",
+            (expression, vault_id, limit, offset),
+        ).fetchall()
+        return [NoteSearchResult(*row) for row in rows]
+
+    def update_note_content(self, note_id: int, content: str, *, expected_revision: int) -> Note:
+        """Accept source only while an active note still has the expected revision.
+
+        Changed text, its SHA-256 hash, an incremented revision, pending state,
+        and a cleared processing error are written in one statement. Identical
+        text preserves the revision, processing state, and error. Missing,
+        deleted, or superseded notes raise ValueError without changing stored
+        data. Commit immediately unless transaction() owns the operation;
+        no Markdown files are read or written.
+        """
+        if expected_revision < 1:
+            raise ValueError("expected_revision must be positive")
+        content_hash = sha256(content.encode("utf-8")).hexdigest()
+        row = self._connection.execute(
+            f"""UPDATE note
+                SET content = ?, content_hash = ?,
+                    revision = revision + CASE WHEN content = ? THEN 0 ELSE 1 END,
+                    processing_status = CASE
+                        WHEN content = ? THEN processing_status ELSE 'pending' END,
+                    last_error = CASE WHEN content = ? THEN last_error ELSE NULL END
+                WHERE note_id = ? AND revision = ? AND deleted_at IS NULL
+                RETURNING {_NOTE_COLUMNS}""",
+            (content, content_hash, content, content, content, note_id, expected_revision),
+        ).fetchone()
+        if row is None:
+            raise ValueError(
+                f"Note {note_id} is missing, deleted, or no longer at revision "
+                f"{expected_revision}; reload before updating"
+            )
+        return Note(*row)
+
+    def mark_note_deleted(self, note_id: int, *, expected_revision: int) -> Note:
+        """Mark a confirmed removal while the active note has the expected revision.
+
+        The caller must confirm absence during a complete scan or an explicit
+        removal. Set deleted_at and advance revision together, retaining captured
+        content, hash, and processing state. Active lookups exclude the result;
+        stale content updates cannot reactivate it. Missing, already deleted, or
+        superseded notes raise ValueError without changing stored data. Commit
+        immediately unless transaction() owns the operation.
+        """
+        if expected_revision < 1:
+            raise ValueError("expected_revision must be positive")
+        row = self._connection.execute(
+            f"""UPDATE note
+                SET deleted_at = ?, revision = revision + 1
+                WHERE note_id = ? AND revision = ? AND deleted_at IS NULL
+                RETURNING {_NOTE_COLUMNS}""",
+            (_utc_timestamp(), note_id, expected_revision),
+        ).fetchone()
+        if row is None:
+            raise ValueError(
+                f"Note {note_id} is missing, deleted, or no longer at revision "
+                f"{expected_revision}; reload before marking it deleted"
+            )
+        return Note(*row)
+
+    def get_note_index(self, note_id: int) -> NoteIndex | None:
+        """Return only a ready index matching an active note's revision and version.
+
+        Missing, deleted, failed, pending, and superseded results return None.
+        An older stored result remains until replaced, but is never exposed as
+        current through this method.
+        """
+        row = self._connection.execute(
+            f"""SELECT {_INDEX_COLUMNS} FROM note_index
+                WHERE note_id = ? AND EXISTS (
+                    SELECT 1 FROM note
+                    WHERE note.note_id = note_index.note_id
+                        AND note.deleted_at IS NULL AND note.processing_status = 'ready'
+                        AND note.revision = note_index.indexed_revision
+                        AND note.required_processor_version = note_index.processor_version
+                )""",
+            (note_id,),
+        ).fetchone()
+        return NoteIndex(*row) if row is not None else None
+
+    def publish_note_index(
+        self,
+        note_id: int,
+        parsed: ParsedNote,
+        *,
+        expected_revision: int,
+        processor_version: str,
+    ) -> bool:
+        """Atomically publish parsed content and mark the matching note ready.
+
+        Return False without writes if the note was deleted, changed revision,
+        or now requires another processor version. Roll back both writes if the
+        index fails validation. The caller parses before entering this short
+        writer transaction. Nested calls participate in the caller's transaction.
+        """
+        if expected_revision < 1 or not processor_version.strip():
+            raise ValueError("A positive revision and nonblank processor version are required")
+        with self.transaction():
+            row = self._connection.execute(
+                """UPDATE note SET processing_status = 'ready', last_error = NULL
+                    WHERE note_id = ? AND revision = ? AND required_processor_version = ?
+                        AND deleted_at IS NULL
+                    RETURNING note_id""",
+                (note_id, expected_revision, processor_version),
+            ).fetchone()
+            if row is None:
+                return False
+            self._connection.execute(
+                f"""INSERT INTO note_index ({_INDEX_COLUMNS})
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (note_id) DO UPDATE SET
+                        title = excluded.title,
+                        frontmatter_json = excluded.frontmatter_json,
+                        tags_json = excluded.tags_json,
+                        headings_json = excluded.headings_json,
+                        links_json = excluded.links_json,
+                        searchable_text = excluded.searchable_text,
+                        indexed_revision = excluded.indexed_revision,
+                        processor_version = excluded.processor_version,
+                        indexed_at = excluded.indexed_at""",
+                (
+                    note_id,
+                    parsed.title,
+                    parsed.frontmatter_json,
+                    parsed.tags_json,
+                    parsed.headings_json,
+                    parsed.links_json,
+                    parsed.searchable_text,
+                    expected_revision,
+                    processor_version,
+                    _utc_timestamp(),
+                ),
+            )
+        return True
+
+    def record_note_index_failure(
+        self,
+        note_id: int,
+        error: str,
+        *,
+        expected_revision: int,
+        processor_version: str,
+    ) -> bool:
+        """Record a parse failure only while its revision/version are still needed.
+
+        A concurrent successful publication takes precedence over this failure.
+        Return False for superseded work, a deleted/missing note, or an already
+        current index. Database failures propagate rather than becoming parse
+        errors. Commit immediately unless transaction() owns the operation.
+        """
+        if expected_revision < 1 or not processor_version.strip() or not error.strip():
+            raise ValueError(
+                "A positive revision, nonblank processor version and error are required"
+            )
+        cursor = self._connection.execute(
+            """UPDATE note SET processing_status = 'failed', last_error = ?
+                WHERE note_id = ? AND revision = ? AND required_processor_version = ?
+                    AND deleted_at IS NULL AND NOT EXISTS (
+                        SELECT 1 FROM note_index
+                        WHERE note_index.note_id = note.note_id
+                            AND note_index.indexed_revision = note.revision
+                            AND note_index.processor_version = note.required_processor_version
+                    )""",
+            (error.strip(), note_id, expected_revision, processor_version),
+        )
+        return cursor.rowcount == 1
 
     def close(self) -> None:
         """Close the connection; later operations on this instance will fail."""

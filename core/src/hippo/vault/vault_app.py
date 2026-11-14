@@ -1,20 +1,36 @@
 """Vault Typer application and command handlers."""
 
 import sqlite3
+import sys
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
 
 import typer
+from rich.console import Console
+from rich.table import Table
+from rich.text import Text
 
 from hippo.config import Config
+from hippo.vault.indexer import NoteIndexer
+from hippo.vault.refresher import VaultRefresher
 from hippo.vault.registry import VaultRegistry
 from hippo.vault.repository import VaultRepository
+from hippo.vault.scanner import VaultScanner
 
 vault_app = typer.Typer(
-    help="Register and list local Markdown vaults.",
+    help="Manage local Markdown vaults and read, list, or search captured notes.",
     no_args_is_help=True,
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault list\n\n"
+        "hippo vault notes 3\n\n"
+        'hippo vault search 3 "brain"\n\n'
+        "hippo vault read 5\n\n"
+        "hippo vault status 5\n\n"
+        "hippo vault refresh 3"
+    ),
 )
 
 
@@ -41,17 +57,22 @@ def configure_vault(
 
 
 @contextmanager
-def _open_registry(ctx: typer.Context) -> Generator[VaultRegistry]:
+def _open_repository(ctx: typer.Context) -> Generator[VaultRepository]:
     """Close command-owned storage and translate expected application errors."""
     database: Path | None = ctx.obj
     try:
         if database is None:
             database = Config.from_env().database_path
         with VaultRepository(database) as repository:
-            yield VaultRegistry(repository)
+            yield repository
     except (OSError, ValueError, sqlite3.Error, RuntimeError) as error:
         message = str(error)
-        if isinstance(error, sqlite3.OperationalError) and message == "no such table: vault":
+        if isinstance(error, sqlite3.OperationalError) and message in {
+            "no such table: vault",
+            "no such table: note",
+            "no such table: note_index",
+            "no such table: note_search",
+        }:
             message += ". Apply Hippo migrations to the selected database first."
         typer.echo(f"Error: {message}", err=True)
         raise typer.Exit(code=1) from error
@@ -80,8 +101,8 @@ def add_vault(
     ],
 ) -> None:
     """Register a directory, or return its existing registration."""
-    with _open_registry(ctx) as registry:
-        vault = registry.add_vault(path)
+    with _open_repository(ctx) as repository:
+        vault = VaultRegistry(repository).add_vault(path)
     typer.echo(f"Vault {vault.vault_id}: {vault.display_name}\n  {vault.root_path}")
 
 
@@ -95,10 +116,297 @@ def add_vault(
 )
 def list_vaults(ctx: typer.Context) -> None:
     """List registered vaults in ID order, including unavailable roots."""
-    with _open_registry(ctx) as registry:
-        vaults = registry.list_vaults()
+    with _open_repository(ctx) as repository:
+        vaults = VaultRegistry(repository).list_vaults()
     if not vaults:
         typer.echo("No vaults registered.")
         return
     for vault in vaults:
         typer.echo(f"Vault {vault.vault_id}: {vault.display_name}\n  {vault.root_path}")
+
+
+@vault_app.command(
+    "read",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault read 5\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 read 5"
+    ),
+)
+def read_note(
+    ctx: typer.Context,
+    note_id: Annotated[
+        int,
+        typer.Argument(min=1, max=2**63 - 1, help="Note ID shown by notes or search."),
+    ],
+) -> None:
+    """Print an active note's captured Markdown, without headers or extra newlines.
+
+    This reads the stored capture. Run refresh first to include recent file edits.
+    Missing or deleted notes return an error; an empty note prints nothing.
+    """
+    with _open_repository(ctx) as repository:
+        note = repository.get_note(note_id)
+        if note is None:
+            raise ValueError(f"Note {note_id} is missing or deleted")
+    sys.stdout.write(note.content)
+
+
+@vault_app.command(
+    "notes",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault notes 3\n\n"
+        "hippo vault notes 3 --limit 5 --after 5\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 notes 3"
+    ),
+)
+def list_vault_notes(
+    ctx: typer.Context,
+    vault_id: Annotated[
+        int,
+        typer.Argument(min=1, max=2**63 - 1, help="Vault ID shown by hippo vault list."),
+    ],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", min=1, max=100, help="Maximum number of notes to return."),
+    ] = 20,
+    after: Annotated[
+        int,
+        typer.Option("--after", min=0, max=2**63 - 1, help="Continue after this note ID."),
+    ] = 0,
+) -> None:
+    """List active notes in one vault, without printing their Markdown bodies.
+
+    Notes are ordered by ID. Use --after with the last note ID to get another
+    page. Index current means the index matches the captured revision and version.
+    """
+    with _open_repository(ctx) as repository:
+        notes = repository.list_note_statuses(vault_id, after_note_id=after, limit=limit)
+    if not notes:
+        typer.echo("No active notes found.")
+        return
+    table = Table()
+    table.add_column("Note ID", justify="right", no_wrap=True)
+    table.add_column("Path", overflow="fold")
+    table.add_column("Revision", justify="right", no_wrap=True)
+    table.add_column("State")
+    table.add_column("Index current")
+    for note in notes:
+        table.add_row(
+            str(note.note_id),
+            Text(note.relative_path),
+            str(note.revision),
+            note.processing_status,
+            "yes" if note.index_is_current else "no",
+        )
+    Console().print(table)
+
+
+@vault_app.command(
+    "status",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault status 5\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 status 5"
+    ),
+)
+def show_note_status(
+    ctx: typer.Context,
+    note_id: Annotated[
+        int,
+        typer.Argument(min=1, max=2**63 - 1, help="Note ID shown by notes or search."),
+    ],
+) -> None:
+    """Show an active note's processing and index status, without its body.
+
+    Includes the captured revision, stored index revision, processor versions,
+    index freshness, and last processing error. The ID is a note ID, not a vault ID.
+    """
+    with _open_repository(ctx) as repository:
+        note = repository.get_note_status(note_id)
+        if note is None:
+            raise ValueError(f"Note {note_id} is missing or deleted")
+    table = Table("Field", "Value")
+    for field, value in (
+        ("Note ID", note.note_id),
+        ("Vault ID", note.vault_id),
+        ("Path", note.relative_path),
+        ("Revision", note.revision),
+        ("State", note.processing_status),
+        ("Required processor", note.required_processor_version),
+        ("Indexed revision", note.indexed_revision),
+        ("Index processor", note.processor_version),
+        ("Index current", "yes" if note.index_is_current else "no"),
+        ("Last error", note.last_error),
+    ):
+        table.add_row(field, Text(str(value) if value is not None else "—"))
+    Console().print(table)
+
+
+@vault_app.command(
+    "scan",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault scan 3\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 scan 3"
+    ),
+)
+def scan_vault(
+    ctx: typer.Context,
+    vault_id: Annotated[
+        int,
+        typer.Argument(min=1, help="Positive vault ID shown by hippo vault list."),
+    ],
+) -> None:
+    """Scan a registered vault and reconcile its Markdown notes."""
+    with _open_repository(ctx) as repository:
+        result = VaultScanner(repository).scan(vault_id)
+    typer.echo(f"Vault {result.vault.vault_id}: {result.vault.display_name}")
+    typer.echo(
+        f"Created: {result.created} | Updated: {result.updated} | "
+        f"Unchanged: {result.unchanged} | Deleted: {result.deleted} | Failed: {result.failed}"
+    )
+    if result.vault.scan_status != "ok":
+        typer.echo(f"Error: Scan incomplete: {result.vault.last_scan_error}", err=True)
+        raise typer.Exit(code=1)
+
+
+@vault_app.command(
+    "index",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault index 3\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 index 3"
+    ),
+)
+def index_vault(
+    ctx: typer.Context,
+    vault_id: Annotated[
+        int,
+        typer.Argument(min=1, help="Positive vault ID shown by hippo vault list."),
+    ],
+) -> None:
+    """Index captured notes without scanning the vault or reading Markdown files.
+
+    Skip current indexes and retry failed notes. Skipped notes may have changed
+    during this pass or require an unsupported processor version. Return exit
+    code 1 if any notes failed or were skipped; otherwise return 0.
+    """
+    with _open_repository(ctx) as repository:
+        result = NoteIndexer(repository).index(vault_id)
+    typer.echo(f"Vault {result.vault.vault_id}: {result.vault.display_name}")
+    typer.echo(
+        f"Indexed: {result.indexed} | Unchanged: {result.unchanged} | "
+        f"Skipped: {result.skipped} | Failed: {result.failed}"
+    )
+    if result.failed or result.skipped:
+        typer.echo(
+            "Error: Indexing incomplete. Inspect note.last_error for failures; "
+            "skipped notes changed or require another processor version.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+
+@vault_app.command(
+    "refresh",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault refresh 3\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 refresh 3"
+    ),
+)
+def refresh_vault(
+    ctx: typer.Context,
+    vault_id: Annotated[
+        int,
+        typer.Argument(min=1, help="Positive vault ID shown by hippo vault list."),
+    ],
+) -> None:
+    """Scan once, then index captured changes after a successful scan.
+
+    Run manually to refresh search results after file changes. An incomplete scan
+    skips indexing. Return exit code 1 if scanning fails or indexing has failed or
+    skipped notes; otherwise return 0. This command does not run periodically.
+    """
+    with _open_repository(ctx) as repository:
+        result = VaultRefresher(repository).refresh(vault_id)
+    scan = result.scan
+    typer.echo(f"Vault {scan.vault.vault_id}: {scan.vault.display_name}")
+    typer.echo(
+        f"Scan: Created: {scan.created} | Updated: {scan.updated} | "
+        f"Unchanged: {scan.unchanged} | Deleted: {scan.deleted} | Failed: {scan.failed}"
+    )
+    indexed = result.index
+    if indexed is None:
+        typer.echo(
+            f"Error: Refresh stopped; scan incomplete: {scan.vault.last_scan_error}. "
+            "Indexing was not run.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    typer.echo(
+        f"Index: Indexed: {indexed.indexed} | Unchanged: {indexed.unchanged} | "
+        f"Skipped: {indexed.skipped} | Failed: {indexed.failed}"
+    )
+    if indexed.failed or indexed.skipped:
+        typer.echo(
+            "Error: Refresh incomplete; indexing had failed or skipped notes. "
+            "Inspect note.last_error for failures; skipped notes changed or require "
+            "another processor version.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+
+@vault_app.command(
+    "search",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        'hippo vault search 3 "database migration"\n\n'
+        'hippo vault search 3 "database" --limit 5 --offset 5\n\n'
+        'hippo vault --database sandbox/hippo.sqlite3 search 3 "database"'
+    ),
+)
+def search_vault(
+    ctx: typer.Context,
+    vault_id: Annotated[
+        int,
+        typer.Argument(min=1, help="Positive vault ID shown by hippo vault list."),
+    ],
+    query: Annotated[
+        str,
+        typer.Argument(help="Words to find in titles or body text; quote multiword queries."),
+    ],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", min=1, max=100, help="Maximum number of matches to return."),
+    ] = 20,
+    offset: Annotated[
+        int,
+        typer.Option("--offset", min=0, help="Number of matches to skip."),
+    ] = 0,
+) -> None:
+    """Search current indexed notes in one vault, best matches first.
+
+    All query words must match, in any order. Matching ignores case and accents;
+    punctuation separates words. Use scan and index first to capture file edits.
+    Results show rank, note ID, title, and path.
+    A valid search with no matches returns exit code 0.
+    """
+    with _open_repository(ctx) as repository:
+        results = repository.search_notes(vault_id, query, limit=limit, offset=offset)
+    if not results:
+        typer.echo("No matching notes.")
+        return
+    table = Table()
+    table.add_column("Rank", justify="right", no_wrap=True)
+    table.add_column("Note ID", justify="right", no_wrap=True)
+    table.add_column("Title", overflow="fold")
+    table.add_column("Path", overflow="fold")
+    for rank, result in enumerate(results, start=offset + 1):
+        table.add_row(
+            str(rank), str(result.note_id), Text(result.title), Text(result.relative_path)
+        )
+    Console().print(table)
