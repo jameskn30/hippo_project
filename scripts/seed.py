@@ -9,15 +9,10 @@ from pathlib import Path
 from hippo.config import Config
 from hippo.vault.registry import VaultRegistry
 from hippo.vault.repository import VaultRepository
+from hippo.vault.source import read_source
 
-MAX_NOTE_BYTES = 10 * 1024 * 1024
 MAX_TOTAL_BYTES = 100 * 1024 * 1024
 MAX_ENTRIES = 10_000
-
-
-def file_signature(info: os.stat_result) -> tuple[int, int, int, int, int]:
-    """Identify a source file and detect changes during its read."""
-    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
 
 
 def validate_seed(seed_path: Path) -> tuple[Path, list[tuple[str, str]]]:
@@ -51,30 +46,11 @@ def validate_seed(seed_path: Path) -> tuple[Path, list[tuple[str, str]]]:
                 if entry.is_dir(follow_symlinks=False):
                     directories.append(path)
                     continue
-                if not entry.is_file(follow_symlinks=False) or path.suffix.lower() != ".md":
-                    raise ValueError(f"Seed file leaves must be regular .md files: {path}")
                 relative_path = path.relative_to(root).as_posix()
-                if "\\" in relative_path or not path.resolve(strict=True).is_relative_to(root):
-                    raise ValueError(f"Unsupported vault-relative path: {path}")
-
-                with path.open("rb") as source:
-                    before = os.fstat(source.fileno())
-                    raw = source.read(MAX_NOTE_BYTES + 1)
-                    after = os.fstat(source.fileno())
-                if len(raw) > MAX_NOTE_BYTES:
-                    raise ValueError(f"Seed note exceeds 10 MiB: {path}")
-                total_bytes += len(raw)
+                content = read_source(root, path)
+                total_bytes += len(content.encode("utf-8"))
                 if total_bytes > MAX_TOTAL_BYTES:
                     raise ValueError("Seed Markdown exceeds 100 MiB in total")
-                before_read = file_signature(before)
-                after_read = file_signature(after)
-                current = file_signature(path.lstat())
-                if before_read != after_read or after_read != current:
-                    raise ValueError(f"Seed note changed while being read: {path}")
-                try:
-                    content = raw.decode("utf-8")
-                except UnicodeDecodeError as error:
-                    raise ValueError(f"Seed note must contain valid UTF-8: {path}") from error
                 captures.append((relative_path, content))
 
     if not captures:

@@ -40,3 +40,30 @@ class Note:
     def column_names(cls) -> tuple[str, ...]:
         """Return stored field names in the record's constructor order."""
         return tuple(field.name for field in fields(cls))
+
+
+@dataclass(frozen=True, slots=True)
+class NoteCatalogEntry:
+    """Active note metadata used for reconciliation without loading its body."""
+
+    note_id: int
+    relative_path: str
+    content_hash: str
+    revision: int
+
+    @classmethod
+    def column_names(cls) -> tuple[str, ...]:
+        """Return projected column names in the record's constructor order."""
+        return tuple(field.name for field in fields(cls))
+
+
+@dataclass(frozen=True, slots=True)
+class ScanResult:
+    """Reconciliation outcome; failure rolls back all note changes."""
+
+    vault: Vault
+    created: int = 0
+    updated: int = 0
+    unchanged: int = 0
+    deleted: int = 0
+    failed: int = 0

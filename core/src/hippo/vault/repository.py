@@ -3,15 +3,22 @@
 import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 from types import TracebackType
-from typing import Self
+from typing import Literal, Self
 
-from hippo.vault.models import Note, Vault
+from hippo.vault.models import Note, NoteCatalogEntry, Vault
 
 _VAULT_COLUMNS = ", ".join(Vault.column_names())
 _NOTE_COLUMNS = ", ".join(Note.column_names())
+_CATALOG_COLUMNS = ", ".join(NoteCatalogEntry.column_names())
+
+
+def _utc_timestamp() -> str:
+    """Return the current UTC time in the stored millisecond timestamp format."""
+    return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 class VaultRepository:
@@ -81,6 +88,66 @@ class VaultRepository:
             f"SELECT {_VAULT_COLUMNS} FROM vault ORDER BY vault_id"
         ).fetchall()
         return [Vault(row[0], Path(row[1]), *row[2:]) for row in rows]
+
+    def get_vault(self, vault_id: int) -> Vault | None:
+        """Return a registration by ID without checking root availability."""
+        row = self._connection.execute(
+            f"SELECT {_VAULT_COLUMNS} FROM vault WHERE vault_id = ?", (vault_id,)
+        ).fetchone()
+        return Vault(row[0], Path(row[1]), *row[2:]) if row is not None else None
+
+    def list_note_catalog(self, vault_id: int) -> list[NoteCatalogEntry]:
+        """Return active note metadata for one vault, without captured bodies.
+
+        Ordered by ID. The scanner holds its writer transaction while obtaining
+        and reconciling this snapshot. Memory is proportional to catalog size.
+        """
+        rows = self._connection.execute(
+            f"""SELECT {_CATALOG_COLUMNS} FROM note
+                WHERE vault_id = ? AND deleted_at IS NULL ORDER BY note_id""",
+            (vault_id,),
+        ).fetchall()
+        return [NoteCatalogEntry(*row) for row in rows]
+
+    def record_scan_result(
+        self,
+        vault_id: int,
+        *,
+        availability: Literal["ok", "not_ok"],
+        scan_status: Literal["ok", "not_ok"],
+        error: str | None = None,
+    ) -> Vault:
+        """Record a completed scan's outcome and return the updated vault.
+
+        Success requires an available root and no error; it records the current
+        UTC time and clears the previous error. Failure requires a nonblank
+        error and preserves the last successful timestamp. The caller determines
+        coverage and coordinates scans before recording an outcome. Invalid
+        combinations or an unknown vault raise ValueError. Commit immediately
+        unless transaction() owns the operation.
+        """
+        if scan_status == "ok":
+            if availability != "ok" or error is not None:
+                raise ValueError("A successful scan requires availability ok and no error")
+            successful_at = _utc_timestamp()
+        else:
+            if error is None or not error.strip():
+                raise ValueError("An unsuccessful scan requires a nonblank error")
+            error = error.strip()
+            successful_at = None
+
+        row = self._connection.execute(
+            f"""UPDATE vault
+                SET availability = ?, scan_status = ?,
+                    last_successful_scan_at = COALESCE(?, last_successful_scan_at),
+                    last_scan_error = ?
+                WHERE vault_id = ?
+                RETURNING {_VAULT_COLUMNS}""",
+            (availability, scan_status, successful_at, error, vault_id),
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"Vault {vault_id} is not registered")
+        return Vault(row[0], Path(row[1]), *row[2:])
 
     def create_note(self, vault_id: int, relative_path: str, content: str) -> Note:
         """Insert captured UTF-8 text at revision 1 with pending processing state.
@@ -163,6 +230,32 @@ class VaultRepository:
             raise ValueError(
                 f"Note {note_id} is missing, deleted, or no longer at revision "
                 f"{expected_revision}; reload before updating"
+            )
+        return Note(*row)
+
+    def mark_note_deleted(self, note_id: int, *, expected_revision: int) -> Note:
+        """Mark a confirmed removal while the active note has the expected revision.
+
+        The caller must confirm absence during a complete scan or an explicit
+        removal. Set deleted_at and advance revision together, retaining captured
+        content, hash, and processing state. Active lookups exclude the result;
+        stale content updates cannot reactivate it. Missing, already deleted, or
+        superseded notes raise ValueError without changing stored data. Commit
+        immediately unless transaction() owns the operation.
+        """
+        if expected_revision < 1:
+            raise ValueError("expected_revision must be positive")
+        row = self._connection.execute(
+            f"""UPDATE note
+                SET deleted_at = ?, revision = revision + 1
+                WHERE note_id = ? AND revision = ? AND deleted_at IS NULL
+                RETURNING {_NOTE_COLUMNS}""",
+            (_utc_timestamp(), note_id, expected_revision),
+        ).fetchone()
+        if row is None:
+            raise ValueError(
+                f"Note {note_id} is missing, deleted, or no longer at revision "
+                f"{expected_revision}; reload before marking it deleted"
             )
         return Note(*row)
 
