@@ -93,6 +93,30 @@ class NoteCatalogEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class NoteStatus:
+    """Active note metadata and its stored index version, without either body."""
+
+    note_id: int
+    vault_id: int
+    relative_path: str
+    revision: int
+    processing_status: Literal["pending", "processing", "ready", "failed"]
+    required_processor_version: str
+    last_error: str | None
+    indexed_revision: int | None
+    processor_version: str | None
+
+    @property
+    def index_is_current(self) -> bool:
+        """Match the same freshness rules used by note lookup and search."""
+        return (
+            self.processing_status == "ready"
+            and self.indexed_revision == self.revision
+            and self.processor_version == self.required_processor_version
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class NoteSearchResult:
     """One current note match with its raw BM25 score; lower scores rank better."""
 

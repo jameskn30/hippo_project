@@ -1,6 +1,7 @@
 """Vault Typer application and command handlers."""
 
 import sqlite3
+import sys
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -19,8 +20,17 @@ from hippo.vault.repository import VaultRepository
 from hippo.vault.scanner import VaultScanner
 
 vault_app = typer.Typer(
-    help="Register, list, scan, index, refresh, and search local Markdown vaults.",
+    help="Manage local Markdown vaults and read, list, or search captured notes.",
     no_args_is_help=True,
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault list\n\n"
+        "hippo vault notes 3\n\n"
+        'hippo vault search 3 "brain"\n\n'
+        "hippo vault read 5\n\n"
+        "hippo vault status 5\n\n"
+        "hippo vault refresh 3"
+    ),
 )
 
 
@@ -113,6 +123,125 @@ def list_vaults(ctx: typer.Context) -> None:
         return
     for vault in vaults:
         typer.echo(f"Vault {vault.vault_id}: {vault.display_name}\n  {vault.root_path}")
+
+
+@vault_app.command(
+    "read",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault read 5\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 read 5"
+    ),
+)
+def read_note(
+    ctx: typer.Context,
+    note_id: Annotated[
+        int,
+        typer.Argument(min=1, max=2**63 - 1, help="Note ID shown by notes or search."),
+    ],
+) -> None:
+    """Print an active note's captured Markdown, without headers or extra newlines.
+
+    This reads the stored capture. Run refresh first to include recent file edits.
+    Missing or deleted notes return an error; an empty note prints nothing.
+    """
+    with _open_repository(ctx) as repository:
+        note = repository.get_note(note_id)
+        if note is None:
+            raise ValueError(f"Note {note_id} is missing or deleted")
+    sys.stdout.write(note.content)
+
+
+@vault_app.command(
+    "notes",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault notes 3\n\n"
+        "hippo vault notes 3 --limit 5 --after 5\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 notes 3"
+    ),
+)
+def list_vault_notes(
+    ctx: typer.Context,
+    vault_id: Annotated[
+        int,
+        typer.Argument(min=1, max=2**63 - 1, help="Vault ID shown by hippo vault list."),
+    ],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", min=1, max=100, help="Maximum number of notes to return."),
+    ] = 20,
+    after: Annotated[
+        int,
+        typer.Option("--after", min=0, max=2**63 - 1, help="Continue after this note ID."),
+    ] = 0,
+) -> None:
+    """List active notes in one vault, without printing their Markdown bodies.
+
+    Notes are ordered by ID. Use --after with the last note ID to get another
+    page. Index current means the index matches the captured revision and version.
+    """
+    with _open_repository(ctx) as repository:
+        notes = repository.list_note_statuses(vault_id, after_note_id=after, limit=limit)
+    if not notes:
+        typer.echo("No active notes found.")
+        return
+    table = Table()
+    table.add_column("Note ID", justify="right", no_wrap=True)
+    table.add_column("Path", overflow="fold")
+    table.add_column("Revision", justify="right", no_wrap=True)
+    table.add_column("State")
+    table.add_column("Index current")
+    for note in notes:
+        table.add_row(
+            str(note.note_id),
+            Text(note.relative_path),
+            str(note.revision),
+            note.processing_status,
+            "yes" if note.index_is_current else "no",
+        )
+    Console().print(table)
+
+
+@vault_app.command(
+    "status",
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault status 5\n\n"
+        "hippo vault --database sandbox/hippo.sqlite3 status 5"
+    ),
+)
+def show_note_status(
+    ctx: typer.Context,
+    note_id: Annotated[
+        int,
+        typer.Argument(min=1, max=2**63 - 1, help="Note ID shown by notes or search."),
+    ],
+) -> None:
+    """Show an active note's processing and index status, without its body.
+
+    Includes the captured revision, stored index revision, processor versions,
+    index freshness, and last processing error. The ID is a note ID, not a vault ID.
+    """
+    with _open_repository(ctx) as repository:
+        note = repository.get_note_status(note_id)
+        if note is None:
+            raise ValueError(f"Note {note_id} is missing or deleted")
+    table = Table("Field", "Value")
+    for field, value in (
+        ("Note ID", note.note_id),
+        ("Vault ID", note.vault_id),
+        ("Path", note.relative_path),
+        ("Revision", note.revision),
+        ("State", note.processing_status),
+        ("Required processor", note.required_processor_version),
+        ("Indexed revision", note.indexed_revision),
+        ("Index processor", note.processor_version),
+        ("Index current", "yes" if note.index_is_current else "no"),
+        ("Last error", note.last_error),
+    ):
+        table.add_row(field, Text(str(value) if value is not None else "—"))
+    Console().print(table)
 
 
 @vault_app.command(

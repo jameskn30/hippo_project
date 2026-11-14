@@ -11,11 +11,13 @@ from types import TracebackType
 from typing import Literal, Self
 from unicodedata import normalize
 
+from hippo.schema import validate_schema
 from hippo.vault.models import (
     Note,
     NoteCatalogEntry,
     NoteIndex,
     NoteSearchResult,
+    NoteStatus,
     ParsedNote,
     Vault,
 )
@@ -24,6 +26,9 @@ _VAULT_COLUMNS = ", ".join(Vault.column_names())
 _NOTE_COLUMNS = ", ".join(Note.column_names())
 _CATALOG_COLUMNS = ", ".join(NoteCatalogEntry.column_names())
 _INDEX_COLUMNS = ", ".join(NoteIndex.column_names())
+_STATUS_COLUMNS = """n.note_id, n.vault_id, n.relative_path, n.revision,
+    n.processing_status, n.required_processor_version, n.last_error,
+    i.indexed_revision, i.processor_version"""
 _MAX_SQLITE_INTEGER = 2**63 - 1
 
 
@@ -54,19 +59,24 @@ class VaultRepository:
     """Own one SQLite connection for vault registrations and captured notes.
 
     The caller supplies an existing database initialized by dbmate migrations.
-    Create, use, and close this repository on the same thread. Operations commit
-    individually unless grouped with transaction(). The repository context
-    manager owns only connection lifetime. Root validation and canonicalization
-    belong to the registry layer, rather than this persistence layer.
+    Check its recorded migration versions once when opening. Create, use, and
+    close this repository on the same thread. Operations commit individually
+    unless grouped with transaction(). The repository context manager owns only
+    connection lifetime. Root validation and canonicalization belong to the
+    registry layer, rather than this persistence layer.
     """
 
     def __init__(self, database_path: Path) -> None:
         database_uri = f"{database_path.resolve().as_uri()}?mode=rw"
         self._connection = sqlite3.connect(database_uri, uri=True, autocommit=True)
-        self._connection.execute("PRAGMA foreign_keys = ON")
-        if self._connection.execute("PRAGMA foreign_keys").fetchone() != (1,):
+        try:
+            self._connection.execute("PRAGMA foreign_keys = ON")
+            if self._connection.execute("PRAGMA foreign_keys").fetchone() != (1,):
+                raise RuntimeError("SQLite foreign-key enforcement is unavailable")
+            validate_schema(self._connection)
+        except BaseException:
             self._connection.close()
-            raise RuntimeError("SQLite foreign-key enforcement is unavailable")
+            raise
 
     @contextmanager
     def transaction(self) -> Generator[None]:
@@ -232,6 +242,48 @@ class VaultRepository:
             (vault_id, after_note_id, limit),
         ).fetchall()
         return [Note(*row) for row in rows]
+
+    def get_note_status(self, note_id: int) -> NoteStatus | None:
+        """Read active note/index metadata in one snapshot, without loading text.
+
+        Missing or deleted notes return None. Retain stored index revision and
+        version even when stale, so callers can explain why it is not current.
+        """
+        if not 1 <= note_id <= _MAX_SQLITE_INTEGER:
+            raise ValueError("note_id must be a positive SQLite integer")
+        row = self._connection.execute(
+            f"""SELECT {_STATUS_COLUMNS} FROM note AS n
+                LEFT JOIN note_index AS i ON i.note_id = n.note_id
+                WHERE n.note_id = ? AND n.deleted_at IS NULL""",
+            (note_id,),
+        ).fetchone()
+        return NoteStatus(*row) if row is not None else None
+
+    def list_note_statuses(
+        self, vault_id: int, *, after_note_id: int = 0, limit: int = 20
+    ) -> list[NoteStatus]:
+        """Page through active note metadata in ID order without loading bodies.
+
+        Use the last returned note ID as the next cursor. Limits are 1..100;
+        vault IDs and nonnegative cursors must fit SQLite integers. Invalid input
+        and unknown vaults raise ValueError; an empty/exhausted page returns [].
+        """
+        if not 1 <= vault_id <= _MAX_SQLITE_INTEGER:
+            raise ValueError("vault_id must be a positive SQLite integer")
+        if not 0 <= after_note_id <= _MAX_SQLITE_INTEGER:
+            raise ValueError("after_note_id must be a nonnegative SQLite integer")
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        if self.get_vault(vault_id) is None:
+            raise ValueError(f"Vault {vault_id} is not registered")
+        rows = self._connection.execute(
+            f"""SELECT {_STATUS_COLUMNS} FROM note AS n
+                LEFT JOIN note_index AS i ON i.note_id = n.note_id
+                WHERE n.vault_id = ? AND n.note_id > ? AND n.deleted_at IS NULL
+                ORDER BY n.note_id LIMIT ?""",
+            (vault_id, after_note_id, limit),
+        ).fetchall()
+        return [NoteStatus(*row) for row in rows]
 
     def search_notes(
         self, vault_id: int, query: str, *, limit: int = 20, offset: int = 0

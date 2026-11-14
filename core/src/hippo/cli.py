@@ -7,7 +7,16 @@ import typer
 
 from hippo.vault.vault_app import vault_app
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(
+    no_args_is_help=True,
+    epilog=(
+        "Examples (run from the repository root with the core environment activated):\n\n"
+        "hippo vault notes 3\n\n"
+        "hippo vault read 5\n\n"
+        "hippo vault status 5\n\n"
+        "hippo vault --help"
+    ),
+)
 app.add_typer(vault_app, name="vault")
 
 
