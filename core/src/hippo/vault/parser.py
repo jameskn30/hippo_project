@@ -14,7 +14,7 @@ from yaml.events import AliasEvent, CollectionEndEvent, CollectionStartEvent, Sc
 from hippo.vault.models import ParsedNote
 from hippo.vault.source import MAX_NOTE_BYTES
 
-PROCESSOR_VERSION = "markdown-v1"
+PROCESSOR_VERSION = "markdown-v2"
 _MAX_FRONTMATTER_BYTES = 64 * 1024
 _MAX_YAML_DEPTH = 50
 _MAX_YAML_EVENTS = 10_000
@@ -120,8 +120,8 @@ def _inline_text(tokens: list[Token]) -> str:
     return "".join(pieces)
 
 
-def _links(tokens: list[Token], line_start: int, line_end: int) -> list[dict[str, JsonValue]]:
-    """Link positions use their containing block's one-based inclusive line range."""
+def _links(tokens: list[Token]) -> list[dict[str, JsonValue]]:
+    """Extract destinations, labels, and kinds without storing source positions."""
     links: list[dict[str, JsonValue]] = []
     for index, token in enumerate(tokens):
         if token.type == "link_open":
@@ -143,8 +143,6 @@ def _links(tokens: list[Token], line_start: int, line_end: int) -> list[dict[str
                     "target": target,
                     "label": label,
                     "kind": kind,
-                    "line_start": line_start,
-                    "line_end": line_end,
                 }
             )
     return links
@@ -175,8 +173,8 @@ def parse_note(content: str, relative_path: str) -> ParsedNote:
     Title preference: nonblank YAML title, first nonblank H1, filename stem.
     CommonMark headings, links and images are recognized; other syntax remains
     ordinary text. Valid frontmatter is removed from the searchable body. Invalid,
-    unterminated or unsupported frontmatter remains ordinary Markdown. Line ranges
-    refer to the original source, including any frontmatter lines.
+    unterminated or unsupported frontmatter remains ordinary Markdown. Heading
+    line ranges refer to the original source, including any frontmatter lines.
 
     Input must be valid UTF-8 text within the source reader's 10 MiB limit. Parsing
     normalizes a leading BOM and line endings without changing captured content.
@@ -202,9 +200,7 @@ def parse_note(content: str, relative_path: str) -> ParsedNote:
             if token.map is None:
                 continue
             text_range = token.map
-            line_start = token.map[0] + line_offset + 1
-            line_end = token.map[1] + line_offset
-            links.extend(_links(children, line_start, line_end))
+            links.extend(_links(children))
             previous = tokens[index - 1] if index else None
             if previous is not None and previous.type == "heading_open":
                 level = int(previous.tag[1:])
