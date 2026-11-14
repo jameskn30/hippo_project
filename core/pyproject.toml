@@ -5,7 +5,9 @@ description = "Hippo's local core engine and command-line interface"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "markdown-it-py>=4.2,<5",
     "python-dotenv>=1.2.4",
+    "pyyaml>=6,<7",
     "typer>=0.16,<1.0",
 ]
 

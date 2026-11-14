@@ -35,6 +35,29 @@ class Note:
     revision: int
     deleted_at: str | None
     processing_status: Literal["pending", "processing", "ready", "failed"]
+    required_processor_version: str
+    last_error: str | None
+
+    @classmethod
+    def column_names(cls) -> tuple[str, ...]:
+        """Return stored field names in the record's constructor order."""
+        return tuple(field.name for field in fields(cls))
+
+
+@dataclass(frozen=True, slots=True)
+class NoteIndex:
+    """Stored parsing result for one note revision and processor version."""
+
+    note_id: int
+    title: str
+    frontmatter_json: str
+    tags_json: str
+    headings_json: str
+    links_json: str
+    searchable_text: str
+    indexed_revision: int
+    processor_version: str
+    indexed_at: str
 
     @classmethod
     def column_names(cls) -> tuple[str, ...]:

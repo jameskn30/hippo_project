@@ -207,11 +207,12 @@ class VaultRepository:
     def update_note_content(self, note_id: int, content: str, *, expected_revision: int) -> Note:
         """Accept source only while an active note still has the expected revision.
 
-        Changed text, its SHA-256 hash, an incremented revision, and pending
-        processing state are written in one statement. Identical text preserves
-        the revision and processing state. Missing, deleted, or superseded notes
-        raise ValueError without changing stored data. Commit immediately unless
-        transaction() owns the operation; no Markdown files are read or written.
+        Changed text, its SHA-256 hash, an incremented revision, pending state,
+        and a cleared processing error are written in one statement. Identical
+        text preserves the revision, processing state, and error. Missing,
+        deleted, or superseded notes raise ValueError without changing stored
+        data. Commit immediately unless transaction() owns the operation;
+        no Markdown files are read or written.
         """
         if expected_revision < 1:
             raise ValueError("expected_revision must be positive")
@@ -221,10 +222,11 @@ class VaultRepository:
                 SET content = ?, content_hash = ?,
                     revision = revision + CASE WHEN content = ? THEN 0 ELSE 1 END,
                     processing_status = CASE
-                        WHEN content = ? THEN processing_status ELSE 'pending' END
+                        WHEN content = ? THEN processing_status ELSE 'pending' END,
+                    last_error = CASE WHEN content = ? THEN last_error ELSE NULL END
                 WHERE note_id = ? AND revision = ? AND deleted_at IS NULL
                 RETURNING {_NOTE_COLUMNS}""",
-            (content, content_hash, content, content, note_id, expected_revision),
+            (content, content_hash, content, content, content, note_id, expected_revision),
         ).fetchone()
         if row is None:
             raise ValueError(
