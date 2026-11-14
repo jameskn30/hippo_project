@@ -11,3 +11,13 @@ ORDER BY vault_id;
 
 select * from note limit 50
 
+SELECT *
+FROM note
+WHERE deleted_at IS NULL
+ORDER BY note_id;
+
+SELECT *
+FROM note
+WHERE deleted_at IS NOT NULL
+ORDER BY note_id;
+
